@@ -37,7 +37,7 @@ Additionally, there are many other different browsers out there, and I have a be
 
 ## Installation
 
-See [INSTALL.md](https://github.com/barrowclift/hackerNewsCleanser/blob/master/INSTALL.md).
+See [INSTALL.md](https://github.com/barrowclift/hacker-news-cleanser/blob/master/INSTALL.md).
 
 ## Starting and Stopping
 
@@ -53,4 +53,4 @@ You can filter articles by site, title, and username. To a new filter item, exec
 
 The Hacker News Cleanser is open source, licensed under the MIT License.
 
-See [LICENSE](https://github.com/barrowclift/shelf/blob/master/LICENSE) for more.
+See [LICENSE](https://github.com/barrowclift/hacker-news-cleanser/blob/master/LICENSE) for more.
