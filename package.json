@@ -1,0 +1,23 @@
+{
+	"name": "hackerNewsWasher",
+	"version": "1.0.0",
+	"description": "Taking out the trash, one New Yorker post at a time",
+	"main": "hackerNewsWasher.js",
+	"author": "Marc Barrowclift",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/barrowclift/shelf.git"
+	},
+	"dependencies": {
+		"child_process": "^1.0.2",
+		"email-templates": "^3.5.2",
+		"jsdom": "^11.6.2",
+		"mongodb": "^3.0.4",
+		"nodemailer": "^4.6.4",
+		"npm": "^5.7.1",
+		"pug": "^2.0.1",
+		"request": "^2.83.0",
+		"url": "^0.11.0"
+	}
+}

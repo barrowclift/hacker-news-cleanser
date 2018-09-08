@@ -1,0 +1,17 @@
+{
+    "frequencyInMinutes": 1,
+
+    "emailReportEnabled": true,
+    "emailReportFrequencyInDays": 7,
+    "emailReportSender": EMAIL_SENDER_ADDRESS,
+    "emailReportSenderPassword": EMAIL_SENDER_PASSWORD,
+    "emailReportRecipients": [
+    	EMAIL_RECIPIENT_ADDRESS
+    ],
+
+    "username": YOUR_HACKER_NEWS_USERNAME,
+    "password": YOUR_HACKER_NEWS_PASSWORD,
+
+    "userAgent": "Mozilla/5.0 (Windows NT 8.1; Win64; x64; rv:10.0) Gecko/20100101 Firefox/10.0",
+    "hackerNewsBaseUrl": "https://news.ycombinator.com"
+}
