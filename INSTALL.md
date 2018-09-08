@@ -14,7 +14,8 @@ The following instructions have been tested on macOS (for development) and CentO
 
 Some minor setup is required after installation:
 
-* (Required) Edit `PROJECT_ABSOLUTE_PATH` in `config.sh` to match the absolute path on your machine where the Hacker News Cleanser resides.
-* (Required) Set the `username` and `password` fields in `config.json` to the Hacker News account to hide articles for.
-* (Optional) Should you wish the Hacker News Cleanser to automatically start on startup (recommended), see [this short guide](http://pm2.keymetrics.io/docs/usage/startup/) or execute `pm2 startup` to let `pm2` handle the settings for you.
-* (Optional) Adjust the `frequencyInMinutes` and `emailReport*` fields in `config.json`, if desired
+* *(Required)* Edit `PROJECT_ABSOLUTE_PATH` in `config.sh` to match the absolute path on your machine where the Hacker News Cleanser resides.
+* *(Required)* Set the `username` and `password` fields in `config.json` to the Hacker News account to hide articles for.
+* *(Required)* Run `npm install` to download all required node packages. 
+* *(Optional)* Should you wish the Hacker News Cleanser to automatically start on startup (recommended), see [this short guide](http://pm2.keymetrics.io/docs/usage/startup/) or execute `pm2 startup` to let `pm2` handle the settings for you.
+* *(Optional)* Adjust the `frequencyInMinutes` and `emailReport*` fields in `config.json`, if desired
