@@ -19,7 +19,7 @@ That's where the inception of the Hacker News Cleanser came from; a "set it and 
 
 ## The Compromise Between Being Informed and Information Separation
 
-<img width="526" src="https://raw.githubusercontent.com/barrowclift/hackerNewsCleanser/master/screenshots/shelf.png" />
+<img width="526" src="https://raw.githubusercontent.com/barrowclift/hacker-news-cleanser/master/screenshots/shelf.png" />
 
 While I do wish for my personal Hacker News page to be more focused, I also still want to have the ability to see the hidden articles and read them if I so choose. No amount of filter tweaking will prevent the occasional salient article or discussion from getting caught when I would have wished to still see it. Additionally, I do still feel it's important to have a finger on the heartbeat of Hacker News as a whole, only in a separate view and on my own time.
 
@@ -53,4 +53,4 @@ You can filter articles by site, title, and username. To a new filter item, exec
 
 The Hacker News Cleanser is open source, licensed under the MIT License.
 
-See [LICENSE.md](https://github.com/barrowclift/shelf/blob/master/LICENSE.md) for more.
+See [LICENSE](https://github.com/barrowclift/shelf/blob/master/LICENSE) for more.
