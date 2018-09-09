@@ -9,8 +9,8 @@ fi
 CLEANSER_RUNNING=$(ps -ef | grep "node ""$SERVER_SCRIPTS_DIRECTORY""/cleanser.js" | grep -v grep)
 
 if [ -z "$CLEANSER_RUNNING" ]; then
-    pm2 --silent start hackerNewsCleanser
-    #pm2 --log "${LOG_DIRECTORY}"/cleanser.log --name hackerNewsCleanser --silent start "${SERVER_SCRIPTS_DIRECTORY}"/cleanser.js
+    #pm2 --silent start hackerNewsCleanser
+    pm2 --log "${LOG_DIRECTORY}"/cleanser.log --name hackerNewsCleanser --silent start "${SERVER_SCRIPTS_DIRECTORY}"/cleanser.js
     #nohup node "$SERVER_SCRIPTS_DIRECTORY"/cleanser.js > "$LOG_DIRECTORY"/cleanser.log 2>&1 &
     SUCCESS=$?
     
