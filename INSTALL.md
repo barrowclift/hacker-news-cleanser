@@ -12,7 +12,7 @@ The following instructions have been tested on macOS (for development) and CentO
 
 ## Setup
 
-Some minor setup is required after installation:
+After preparing the requirements and cloning a copy of the project from Github, some minor setup is required:
 
 * *(Required)* Edit `PROJECT_ABSOLUTE_PATH` in `config.sh` to match the absolute path on your machine where the Hacker News Cleanser resides.
 * *(Required)* Set the `username` and `password` fields in `config.json` to the Hacker News account to hide articles for.

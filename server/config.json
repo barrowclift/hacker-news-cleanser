@@ -1,12 +1,12 @@
 {
     "frequencyInMinutes": 1,
 
-    "emailReportEnabled": true,
+    "emailReportEnabled": false,
     "emailReportFrequencyInDays": 7,
     "emailReportSender": EMAIL_SENDER_ADDRESS,
     "emailReportSenderPassword": EMAIL_SENDER_PASSWORD,
     "emailReportRecipients": [
-    	EMAIL_RECIPIENT_ADDRESS
+        EMAIL_RECIPIENT_ADDRESS
     ],
 
     "username": YOUR_HACKER_NEWS_USERNAME,
