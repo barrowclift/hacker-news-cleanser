@@ -55,7 +55,7 @@ function shouldSendCleanserReport(callback) {
 			callback(false)
 		} else {
 			var lookback = new Date();
-			lookback.setDate(lookback.getDate() - CONFIG.emailReportEnabled);
+			lookback.setDate(lookback.getDate() - CONFIG.emailReportFrequencyInDays);
 			if (reports.length > 0) {
 				var lastSentTime = new Date(reports[0].sentTime)
 				if (lookback.getTime() > lastSentTime.getTime()) {
