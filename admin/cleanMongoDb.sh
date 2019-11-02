@@ -1,8 +1,9 @@
 #!/bin/bash
 
-source config.sh
+export ADMIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+source "${ADMIN_DIR}"/init.sh
 
-MONGODB_NOHUP_RUNNING=$(ps -ef | grep "mongod --dbpath $MONGO_DB_DIRECTORY" | grep -v grep)
+MONGODB_NOHUP_RUNNING=$(ps -ef | grep "mongod --dbpath ""$MONGO_DB" | grep -v grep)
 HAS_SERVICE_COMMAND=$(command -v service)
 if [ -n "$HAS_SERVICE_COMMAND" ]; then
     HAS_MONGODB_INITD_SERVICE=$(ls /etc/init.d/mongod 2>/dev/null)
@@ -23,19 +24,19 @@ fi
 
 function cleanMongoDb {
     if [ $START_THEN_STOP -eq 1 ]; then
-        ./startMongoDb.sh
+        "${ADMIN_DIR}"/startMongoDb.sh
         starterProcess=$!
         wait $starterProcess
     fi
 
-    node "$SERVER_SCRIPTS_DIRECTORY"/mongoCleaner.js > "$LOG_DIRECTORY"/clean-mongodb.log 2>&1 &
+    node "${ADMIN_DIR}"/mongoCleaner.js > "${LOGS_DIR}"/clean-mongodb.log 2>&1 &
     cleanerProcess=$!
     wait $cleanerProcess
 
-    echo -e "${GREEN}\"hackerNewsCleanserDb\" cleaned${RESET}"
+    echo "Hacker News Cleanser database deleted"
 
     if [ $START_THEN_STOP -eq 1 ]; then
-        ./stopMongoDb.sh
+        "${ADMIN_DIR}"/stopMongoDb.sh
     fi
 }
 
@@ -44,13 +45,12 @@ then
     cleanMongoDb
 else
     # Confirm if they really want to clean MongoDB's data store
-    echo "You are about to drop all relevant collections in \"hackerNewsCleanserDb\", this CANNOT be undone."
+    echo "You are about to drop all collections in Hacker News Cleanser's database, this CANNOT be undone."
     read -p "Are you absolutely sure you want to proceed? (y/n): " -r
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
         cleanMongoDb
-    else
-        echo -e "${RED}\"hackerNewsCleanserDb\" cleaned${RESET}"
     fi
 fi
 
+exit 0

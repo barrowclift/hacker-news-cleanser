@@ -1,355 +1,363 @@
-"use strict"
+"use strict";
 
-const CLASS_NAME = "cleanser"
+// DEPENDENCIES
+// ------------
+// External
+let Jsdom = require("jsdom").JSDOM;
+let request = require("request-promise");
+// Local
+let Logger = require("./Logger");
+let ReportMailman = require("./ReportMailman");
+let util = require("./util");
 
-/**
- * Dependencies
- */
-// Third-Party Dependencies
-var request = require("request")
-var url = require("url")
-var jsdom = require("jsdom")
-const { JSDOM } = jsdom
-// Local Dependencies
-var logger = require("./logger")
-var mongoConnection = require("./mongoConnection")
-var CONFIG = require("./config")
-var tables = require("./tables")
-var emailReport = require("./emailReport")
 
-/**
- * Cleansing frequency
- */
-var frequencyString = "minute"
-if (CONFIG.frequencyInMinutes > 1) {
-	frequencyString = CONFIG.frequencyString + " minutes"
+// CONSTANTS
+// ---------
+const CLASS_NAME = "Cleanser";
+
+
+// GLOBALS
+// -------
+let log = new Logger(CLASS_NAME);
+
+
+class Cleanser {
+
+    /**
+     * Initializes the cleanser, but does not automatically kick it off.
+     * To start the cleanser, `start()` must be called.
+     *
+     * @param {CleanserProperties} cleanserProperties
+     * @param {MongoClient} mongoClient
+     */
+    constructor(cleanserProperties, mongoClient) {
+        this.cleanserProperties = cleanserProperties;
+        this.mongoClient = mongoClient;
+
+        this.reportMailman = new ReportMailman(cleanserProperties, mongoClient);
+
+        this.isStopping = false;
+        this.currentlyCleansing = false;
+        this.cleanseIntervalId = null;
+
+        this.totalCleansedStories = 0;
+
+        /**
+         * If a regex pattern for matching titles was provided that does not
+         * compile, we'll only attempt the once then ignore it in all future
+         * cleansings in this Hacker News Cleanser instance. That way, we're
+         * not reattempting to parse the regex every cleanse and clogging up
+         * the log file with the same errors.
+         */
+        this.ignoredRegexes = new Set();
+
+        // Initializing request templates that the Cleanser will use when started
+        this.loginRequest = {
+            url: this.cleanserProperties.hackerNewsBaseUrl + "/login",
+            followAllRedirects: true,
+            jar: true,
+            form: {
+                acct: this.cleanserProperties.hackerNewsUsername,
+                pw: this.cleanserProperties.hackerNewsPassword,
+                goto: "news"
+            },
+            headers: {
+                "User-Agent": this.cleanserProperties.userAgent
+            }
+        }
+        this.homePageRequest = {
+            url: this.cleanserProperties.hackerNewsBaseUrl,
+            followAllRedirects: true,
+            jar: true,
+            headers: {
+                "User-Agent": this.cleanserProperties.userAgent
+            }
+        }
+        this.hideRequest = {
+            url: this.cleanserProperties.hackerNewsBaseUrl + "/hide",
+            followAllRedirects: true,
+            jar: true,
+            form: {
+                id: "",
+                goto: "news",
+                auth: ""
+            },
+            headers: {
+                "User-Agent": this.cleanserProperties.userAgent
+            }
+        }
+    }
+
+    /**
+     * ==============
+     * PUBLIC METHODS
+     * ==============
+     */
+
+    async start() {
+        log.info("Starting...");
+
+        const THIS = this; // For referencing root-instance "this" in promise context
+
+        // 1. Validate that all required properties were provided
+        if (!this.cleanserProperties.requiredPropertiesWereProvided()) {
+            throw "Required Hacker News Cleanser properties were not provided, cannot startup";
+        }
+
+        // 2. Print total cleansed stories since the beginning of time
+        this.totalCleansedStories = await this.mongoClient.countAllCleansedItems();
+        log.info("So far, the Hacker News Cleanser has cleansed " + this.totalCleansedStories + " total stories from your feed");
+
+        // 3. Login
+        await this._login();
+
+        // 4. Run cleanse so the user doesn't have to wait for the first frequency time to elapse before results.
+        await this._cleanse();
+
+        // 5. Finally, let the cleanse interval take over
+        this.cleanseIntervalId = setInterval(async function() {
+            if (THIS.isStopping) {
+                log.info("Preventing cleanse, shutting down...");
+            } else if (THIS.currentlyCleansing) {
+                log.info("Skipping cleanse, still processing previous one...");
+            } else {
+                await THIS._cleanse();
+            }
+        }, this.cleanserProperties.cleanserFrequencyInMillis);
+    }
+
+    stop() {
+        this.isStopping = true;
+        log.info("Stopping...");
+        clearInterval(this.cleanseIntervalId);
+        log.info("Stopped");
+    }
+
+    /**
+     * ===============
+     * PRIVATE METHODS
+     * ===============
+     */
+
+    /**
+     * The Node request instance will retain whatever authentication cookies
+     * Hacker News returns from this login attempt, so all we need to do is
+     * report back if it was successful or not and use the same request
+     * instance going forward.
+     */
+    async _login() {
+        log.info("Logging into Hacker News");
+
+        let response = await request.post(this.loginRequest);
+        if (response != null) {
+            if (response.indexOf("Bad login.") > -1) {
+                log.error("Hacker News login failed, user='" + this.cleanserProperties.hackerNewsUsername + "', pass='" + this.cleanserProperties.hackerNewsPassword + "'");
+                throw "Hacker News login failed";
+            } else if (response.indexOf("Validation required.") > -1) {
+                log.error("Hacker News login failed, too many bad login attempts, Hacker News now requesting Recaptcha validation. Unfortunately, the only way to fix this is time; please ensure your credentials are correct then try again at a later time.");
+                throw "Too many bad login attempts, ReCAPTCHA validation now required";
+            }
+        }
+        this.lastAuthRefreshTime = new Date();
+
+        let frequencyString = this.cleanserProperties.cleanserFrequencyInMinutes + " minutes";
+        if (this.cleanserProperties.cleanserFrequencyInMinutes == 1) {
+            frequencyString = "minute";
+        }
+        log.info("Login successful, will cleanse Hacker News every " + frequencyString);
+    }
+
+    async _cleanse() {
+        const THIS = this; // For referencing root-instance "this" in promise context
+
+        let homePage = await this._getHomePage();
+        if (!homePage) {
+            return;
+        }
+
+        log.debug("Scanning home page for stories to cleanse");
+
+        let cleansedAtLeastOneStory = false;
+        let nowCheckingStory = false;
+        let idOfCurrentStory = "";
+        let title = "Untitled";
+        let storyLink = "#";
+        let source = "self";
+
+        let dom = new Jsdom(homePage);
+        let rows = dom.window.document.querySelectorAll("tr");
+        for (let row of rows) {
+            let className = row.getAttribute("class");
+            if ("athing" == className) {
+                nowCheckingStory = true;
+
+                idOfCurrentStory = row.getAttribute("id");
+
+                let titleElement = row.querySelector("a.storylink")
+                title = "Untitled";
+                storyLink = "#";
+                if (titleElement) {
+                    title = titleElement.textContent;
+                    storyLink = titleElement.getAttribute("href");
+                }
+                let sourceElement = row.querySelector("span.sitestr");
+                source = "self";
+                if (sourceElement) {
+                    source = sourceElement.textContent;
+                }
+            } else if (nowCheckingStory) {
+                nowCheckingStory = false;
+
+                let userElement = row.querySelector("a.hnuser");
+                let user = "anonymous";
+                if (userElement) {
+                    user = userElement.textContent;
+                }
+
+                // "verdict" is a JSON of boolean "shouldCleanse" and string "cleansedBy";
+                let verdict = await THIS._shouldCleanseStory(title, user, source);
+                if (verdict.shouldCleanse) {
+                    log.info("Cleansing story, title=\"" + title + "\" from " + source);
+
+                    // Extracting auth token from "hide" href link
+                    let authForStory = "";
+                    let actionRowLinks = row.querySelectorAll("a");
+                    for (let link of actionRowLinks) {
+                        if ("hide" == link.textContent) {
+                            let hideLink = link.getAttribute("href");
+                            authForStory = THIS._getParameterByName("auth", hideLink);
+                            break;
+                        }
+                    }
+                    if (!authForStory) {
+                        log.error("_cleanse", "No auth provided in \"" + title + "\"'s link, maybe session has expired?");
+                        log.error(homePage);
+                        break;
+                    }
+
+                    // Save the cleansed story in Mongo and hide it
+                    let cleansedStoryDocument = {
+                        _id: idOfCurrentStory,
+                        title: title,
+                        user: user,
+                        source: source,
+                        cleansedBy: verdict.cleansedBy,
+                        link: storyLink,
+                        hideTime: new Date().getTime()
+                    };
+                    await THIS.mongoClient.insertCleansedStory(cleansedStoryDocument);
+                    await THIS._hideStory(idOfCurrentStory, authForStory);
+                    cleansedAtLeastOneStory = true;
+                }
+
+                continue;
+            }
+        }
+
+        if (!cleansedAtLeastOneStory) {
+            log.debug("No stories needed cleansing");
+        }
+    }
+
+    async _getHomePage() {
+        log.debug("Getting current Hacker News home page");
+
+        let response = null;
+        try {
+            response = await request.post(this.homePageRequest);
+            this.lastAuthRefreshTime = new Date();
+            log.debug("Hacker News home page obtained");
+        } catch (error) {
+            log.error("_getHomePage", "Failed to retrieve the Hacker News home page, error=" + error)
+        }
+        return response;
+    }
+
+    async _shouldCleanseStory(title, user, source, callback) {
+        let blacklistedTitles = await this.mongoClient.findAllBlacklistedTitles();
+        if (blacklistedTitles) {
+            for (let titleDocument of blacklistedTitles) {
+                if ("keyword" == titleDocument.type) {
+                    if (new RegExp("\\b" + titleDocument.keyword + "\\b", "i").test(title)) {
+                        return {
+                            shouldCleanse: true,
+                            cleansedBy: this.cleanserProperties.collectionBlacklistedTitles
+                        };
+                    }
+                } else if ("regex" == titleDocument.type) {
+                    if (!ignoredRegexes.has(titleDocument.regex)) {
+                        try {
+                            if (new RegExp(titleDocument.regex).test(title)) {
+                                return {
+                                    shouldCleanse: true,
+                                    cleansedBy: this.cleanserProperties.collectionBlacklistedTitles
+                                };
+                            }
+                        } catch (error) {
+                            log.error("_shouldCleanseStory", "Failed to parse title blacklist regex \"" + titleDocument.regex + "\", ignoring and skipping");
+                            ignoredRegexes.add(titleDocument.regex);
+                        }
+                    }
+                }
+            }
+        }
+
+        let blacklistedSites = await this.mongoClient.findAllBlacklistedSites();
+        if (blacklistedSites) {
+            for (let siteDocument of blacklistedSites) {
+                if (siteDocument.site == source) {
+                    return {
+                        shouldCleanse: true,
+                        cleansedBy: this.cleanserProperties.collectionBlacklistedSites
+                    };
+                }
+            }
+        }
+
+        let blacklistedUsers = await this.mongoClient.findAllBlacklistedUsers();
+        if (blacklistedUsers) {
+            for (let userDocument of blacklistedUsers) {
+                if (userDocument.user == user) {
+                    return {
+                        shouldCleanse: true,
+                        cleansedBy: this.cleanserProperties.collectionBlacklistedUsers
+                    };
+                }
+            }
+        }
+
+        return {
+            shouldCleanse: false
+        };
+    }
+
+    async _hideStory(storyId, auth) {
+        this.hideRequest.form.id = storyId;
+        this.hideRequest.form.auth = auth;
+        await request.post(this.hideRequest);
+    }
+
+    /**
+     * Parse URL parameter values by key
+     *
+     * https://stackoverflow.com/users/1045296/jolly-exe
+     * https://stackoverflow.com/a/901144
+     */
+    _getParameterByName(name, url) {
+        if (!url) {
+            url = window.location.href
+        }
+        name = name.replace(/[\[\]]/g, "\\$&")
+        let regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+        let results = regex.exec(url);
+        if (!results) {
+            return null
+        }
+        if (!results[2]) {
+            return ''
+        }
+        return decodeURIComponent(results[2].replace(/\+/g, " "))
+    }
 }
-logger.logInfo(CLASS_NAME, "Cleaning Hacker News every " + frequencyString + "...")
 
-/**
- * Request templates
- */
-var loginRequest = {
-	url: CONFIG.hackerNewsBaseUrl + "/login",
-	followAllRedirects: true,
-	jar: true,
-	form: {
-		acct: CONFIG.username,
-		pw: CONFIG.password,
-		goto: "news"
-	},
-	headers: {
-		"User-Agent": CONFIG.userAgent
-	}
-}
-var homePageRequest = {
-	url: CONFIG.hackerNewsBaseUrl,
-	followAllRedirects: true,
-	jar: true,
-	headers: {
-		"User-Agent": CONFIG.userAgent
-	}
-}
-var hideRequest = {
-	url: CONFIG.hackerNewsBaseUrl + "/hide",
-	followAllRedirects: true,
-	jar: true,
-	form: {
-		id: "",
-		goto: "news",
-		auth: ""
-	},
-	headers: {
-		"User-Agent": CONFIG.userAgent
-	}
-}
-var regexesToSkip = new Set() // If there are any regex that won't compile, then skip then for future cleansings
-var titleBlacklistTypesToSkip = new Set() // If there are any title blacklist types we don't expect, skip them for future cleansings
-
-var totalCleansedStories = 0
-
-
-/******************************************
- ***             CLEANSER               ***
- ******************************************/
-
-/**
- * Parse URL parameter values by key
- * 
- * https://stackoverflow.com/users/1045296/jolly-exe
- * https://stackoverflow.com/a/901144
- */
-function getParameterByName(name, url) {
-	if (!url) url = window.location.href
-	name = name.replace(/[\[\]]/g, "\\$&")
-	var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-		results = regex.exec(url)
-	if (!results) return null
-	if (!results[2]) return ''
-	return decodeURIComponent(results[2].replace(/\+/g, " "))
-}
-
-/**
- * Hitting Mongo for every story isn't ideal, but since the interval this will
- * be executed and the number of stories we're doing this for is trivial, it
- * can remain for now.
- *
- * If this was expected to be executed on a larger data set or at a much
- * higher frequency, Mongo's contents should be cached between the
- * frequencies.
- */
-function shouldCleanseStory(title, user, source, callback) {
-	mongoConnection.findAll(tables.BLACKLISTED_TITLES, function(error, titleDocuments) {
-		mongoConnection.findAll(tables.BLACKLISTED_SITES, function(error, siteDocuments) {
-			mongoConnection.findAll(tables.BLACKLISTED_USERS, function(error, userDocuments) {
-				for (var i in userDocuments) {
-					var userDocument = userDocuments[i]
-					if (userDocument.user == user) {
-						return callback(true, tables.BLACKLISTED_USERS)
-					}
-				}
-				for (var i in siteDocuments) {
-					var siteDocument = siteDocuments[i]
-					if (siteDocument.site == source) {
-						return callback(true, tables.BLACKLISTED_SITES)
-					}
-				}
-				for (var i in titleDocuments) {
-					var titleDocument = titleDocuments[i]
-					if (titleDocument.type == "keyword") {
-						if (new RegExp("\\b" + titleDocument.keyword + "\\b", "i").test(title)) {
-							return callback(true, tables.BLACKLISTED_TITLES)
-						}
-					} else if (titleDocument.type == "regex") {
-						if (!regexesToSkip.has(titleDocument.regex)) {
-							try {
-								if (new RegExp(titleDocument.regex).test(title)) {
-									return callback(true, tables.BLACKLISTED_TITLES)
-								}
-							} catch (e) {
-								logger.logError(CLASS_NAME, "shouldCleanseStory", "Couldn't parse title blacklist regex \"" + titleDocument.regex + "\", skipping")
-								regexesToSkip.add(titleDocument.regex)
-							}
-						}
-					} else {
-						if (!titleBlacklistTypesToSkip.has(titleDocuments)) {
-							logger.logWarning(CLASS_NAME, "Unidentified title blacklist type \"" + titleDocument.type + "\" found, skipping")
-							titleBlacklistTypesToSkip.add(titleDocument.type)
-						}
-					}
-				}
-				return callback(false)
-			})
-		})
-	})
-}
-
-/**
- * The request object will retain whatever authentication credentials a
- * successful login creates, so all we need to do is report back if it was
- * succesful or not and use the same request object for future calls if it was
- * successful.
- */
-var timeAuthWasObtained
-function login(callback) {
-	logger.logInfo(CLASS_NAME, "Logging into Hacker News...")
-	request.post(loginRequest, function(error, response, body) {
-		if (error) {
-			logger.logError(CLASS_NAME, "login", error)
-			return callback(error)
-		} else {
-			timeAuthWasObtained = new Date()
-			return callback(null)
-		}
-	})
-}
-
-/**
- * Obtains the current Hacker News home page for the logged in user
- */
-function getHomePageBody(callback) {
-	logger.logInfo(CLASS_NAME, "Getting current Hacker News home page...")
-	request.get(homePageRequest, function(error, response, body) {
-		if (error) {
-			logger.logError(CLASS_NAME, "getHomePageBody", error)
-			return callback(error, null)
-		} else {
-			timeAuthWasObtained = new Date()
-			return callback(null, body)
-		}
-	})
-}
-
-function hideStory(storyId, auth, callback) {
-	hideRequest.form.id = storyId
-	hideRequest.form.auth = auth
-
-	request.post(hideRequest, function(error, response, body) {
-		if (error) {
-			logger.logError(CLASS_NAME, "hideStory", error)
-			return callback(error)	
-		} else {
-			return callback(null)
-		}
-	})
-}
-
-/**
- * Given the current Hackers News page contents and the logged in request
- * session, all home page contents will be cleansed by referencing the various
- * blacklist tables filled by the user.
- */
-var totalCleansedStoriesFromThisPage = 0
-function cleanse(homePageBody, callback) {
-	logger.logInfo(CLASS_NAME, "Checking...")
-
-	var idOfCurrentStory = ""
-	var title = "Untitled"
-	var storyLink = "#"
-	var source = "self"
-
-	var readingStory = false
-
-	var dom = new JSDOM(homePageBody)
-	var rows = dom.window.document.querySelectorAll("tr")
-	rows.forEach(function(row) {
-		var className = row.getAttribute("class")
-		if ("athing" == className) {
-			idOfCurrentStory = row.getAttribute("id")	
-
-			var titleElement = row.querySelector("a.storylink")
-			title = "Untitled"
-			storyLink = "#"
-			if (titleElement) {
-				title = titleElement.textContent
-				storyLink = titleElement.getAttribute("href")
-			}
-			var sourceElement = row.querySelector("span.sitestr")
-			source = "self"
-			if (sourceElement) {
-				source = sourceElement.textContent
-			}
-
-			readingStory = true
-		} else if (readingStory) {
-			var userElement = row.querySelector("a.hnuser")
-			var user = "anonymous"
-			if (userElement) {
-				user = userElement.textContent
-			}
-
-			/**
-			 * Is this a story we want to cleanse? Or leave where it is?
-			 */
-			(function(sub_title, sub_storyLink, sub_user, sub_source, sub_idOfCurrentStory) {
-				shouldCleanseStory(sub_title, sub_user, sub_source, function(shouldCleanse, cleansedBy) {
-					if (shouldCleanse) {
-						logger.logInfo(CLASS_NAME, "Cleansing new story, title=\"" + sub_title + "\" from " + sub_source)
-
-						var actionsRowLinks = row.querySelectorAll("a")
-						var authForStory = ""
-						actionsRowLinks.forEach(function(link) {
-							if ("hide" == link.textContent) {
-								var hideLink = link.getAttribute("href")
-								authForStory = getParameterByName("auth", hideLink)
-								return
-							}
-						})
-
-						if (!authForStory) {
-							logger.logError(CLASS_NAME, "cleanse", "No auth for story \"" + sub_title + "\", has session expired?")
-							logger.logError(CLASS_NAME, "cleanse", homePageBody)
-							return callback(true)
-						}
-
-						/**
-						 * Save the cleansed story in Mongo and *finally* hide it!
-						 */
-						var storyToCleanseDocument = {
-							title: sub_title,
-							user: sub_user,
-							source: sub_source,
-							storyId: sub_idOfCurrentStory,
-							cleansedBy: cleansedBy,
-							link: sub_storyLink,
-							hideTime: new Date().getTime()
-						}
-						mongoConnection.insertOne(tables.CLEANSED_ITEMS, storyToCleanseDocument, function(error) {
-							if (error) {
-								logger.logError(CLASS_NAME, "cleanse", "Couldn't save story we'd cleanse into Mongo. "
-									+ "Since having historical records of activity is important, \"" + storyToCleanseDocument.title + "\" will NOT be cleansed")
-								return callback(true)
-							} else {
-								hideStory(storyToCleanseDocument.storyId, authForStory, function(error) {
-									if (error) {
-										logger.logError(CLASS_NAME, "cleanse", "\"" + storyToCleanseDocument.title + "\" failed to be hidden on Hacker News, will remove clease document from Mongo")
-										mongoConnection.remove(tables.CLEASED_ITEMS, storyToCleanseDocument)
-										return callback(true)
-									} else {
-										totalCleansedStoriesFromThisPage += 1
-									}
-								})
-							}
-						})
-					} else {
-						// RETRIEVE PAGE, HIDE COMMENTS FROM ALL BLOCKED USERS
-					}
-				})
-			})(title, storyLink, user, source, idOfCurrentStory)
-
-			readingStory = false
-		}
-	})
-}
-
-var cleanserMain = function() {
-	logger.logInfo(CLASS_NAME, "Successfully connected to MongoDB")
-
-	mongoConnection.countAll(tables.CLEANSED_ITEMS, function(error, count) {
-		totalCleansedStories = count
-		logger.logInfo(CLASS_NAME, "So far, the Hacker News Cleanser has cleansed " + totalCleansedStories + " total stories from your feed")
-	})
-
-
-	login(function(error) {
-		if (error) {
-			logger.logError(CLASS_NAME, "cleanserMain", "Login failed, please check your credentials and Hacker News endpoint")
-			return
-		} else {
-			logger.logInfo(CLASS_NAME, "Login successful, will cleanse Hacker News every " + frequencyString)
-
-			setInterval(function() {
-				if (totalCleansedStoriesFromThisPage > 0) {
-					logger.logInfo(CLASS_NAME, totalCleansedStoriesFromThisPage + " stories cleansed from previous page")
-					totalCleansedStories += totalCleansedStoriesFromThisPage
-					logger.logInfo(CLASS_NAME, totalCleansedStories + " total stories cleansed by the Hacker News Cleanser")
-					totalCleansedStoriesFromThisPage = 0
-				}
-
-				emailReport.shouldSendCleanserReport(function(shouldSend, storiesToSend) {
-				 	if (shouldSend) {
-				 		logger.logInfo(CLASS_NAME, "Generating weekly email report.")
-				 		emailReport.sendCleanserReport(storiesToSend, totalCleansedStories)
-					}
-				})
-
-				getHomePageBody(function(error, body) {
-					if (error) {
-						logger.logError(CLASS_NAME, "cleanserMain", "Getting most recent Hacker News page failed, will stop for investigation")
-						return
-					} else {
-						logger.logInfo(CLASS_NAME, "Hacker News home page obtained")
-						cleanse(body, function(error) {
-							logger.logInfo(CLASS_NAME, totalCleansedStoriesFromThisPage + " stories cleansed from page");
-							if (error) {
-								logger.logError(CLASS_NAME, "cleanserMain", "Something broke during cleansing, will stop for investigation")
-								return
-							}
-						})
-					}
-				})
-			}, CONFIG.frequencyInMinutes * 60 * 1000)
-		}
-	})
-}
-mongoConnection.open(mongoConnection.DEFAULT_MONGO_CONFIG, cleanserMain)
+module.exports = Cleanser;

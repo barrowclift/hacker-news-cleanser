@@ -41,13 +41,13 @@ See [INSTALL.md](https://github.com/barrowclift/hacker-news-cleanser/blob/master
 
 ## Starting and Stopping
 
-Starting and stopping the Hacker News Cleanser is as simple as running `./start.sh` or `./stop.sh`, respectively.
+Starting and stopping the Hacker News Cleanser is as simple as running `admin/start.sh` or `admin/stop.sh`, respectively.
 
 If you wish to start or stop specific components of the service, use their individual, respective start/stop scripts (not recommended).
 
 ## Adding Items To Filter
 
-You can filter articles by site, title, and username. To a new filter item, execute `./addBlacklistItem.py`, and the usage string will explain the rest.
+You can filter articles by site, title, and username. To a new filter item, execute `admin/addBlacklistItem.py`, and the usage string will explain the rest.
 
 # License
 

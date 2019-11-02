@@ -1,8 +1,9 @@
 #!/bin/bash
 
-source config.sh
+export ADMIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+source "${ADMIN_DIR}"/init.sh
 
-MONGODB_NOHUP_RUNNING=$(ps -ef | grep "mongod --dbpath $MONGO_DB_DIRECTORY" | grep -v grep)
+MONGODB_NOHUP_RUNNING=$(ps -ef | grep "mongod --dbpath ""$MONGO_DB" | grep -v grep)
 HAS_SERVICE_COMMAND=$(command -v service)
 if [ -n "$HAS_SERVICE_COMMAND" ]; then
     HAS_MONGODB_INITD_SERVICE=$(ls /etc/init.d/mongod 2>/dev/null)
@@ -16,14 +17,14 @@ fi
 
 # If neither way of running MongoDB is running, start MongoDB
 if [ -z "$MONGODB_NOHUP_RUNNING" ] && [ -z "$MONGODB_SERVICE_RUNNING" ]; then
-    if [ ! -d "$MONGO_DB_DIRECTORY" ]; then
-        mkdir -p "$MONGO_DB_DIRECTORY"
+    if [ ! -d "$MONGO_DB" ]; then
+        mkdir -p "$MONGO_DB"
     fi
-    if [ ! -d "$LOG_DIRECTORY" ]; then
-        mkdir "$LOG_DIRECTORY";
+    if [ ! -d "$LOGS_DIR" ]; then
+        mkdir "$LOGS_DIR"
     fi
 
-    rm "$LOG_DIRECTORY"/mongodb.log 2> /dev/null
+    rm "$LOGS_DIR"/mongodb.log 2> /dev/null
 
     if [ -n "$HAS_MONGODB_INITD_SERVICE" ]; then
         sudo service mongod start
@@ -31,17 +32,20 @@ if [ -z "$MONGODB_NOHUP_RUNNING" ] && [ -z "$MONGODB_SERVICE_RUNNING" ]; then
     elif [ -n "$HAS_MONGODB_SYSTEMCTL_SERVICE" ]; then
         sudo systemctl start mongod
         SUCCESS=$?
-    else    
-        nohup mongod --dbpath "$MONGO_DB_DIRECTORY" > "$LOG_DIRECTORY"/mongodb.log 2>&1 &
+    else
+        nohup mongod --dbpath "$MONGO_DB" > "$LOGS_DIR"/mongodb.log 2>&1 &
         SUCCESS=$?
     fi
-    
+
     if [ $SUCCESS -eq 0 ]; then
         echo -e "${GREEN}MongoDB started${RESET}"
+        exit 0
     else
         echo -e "${RED}MongoDB failed to start${RESET}"
+        exit 1
     fi
 else
-    echo -e "${GREEN}MongoDB already running${RESET}"
+    echo "MongoDB already running"
+    exit 0
 fi
 

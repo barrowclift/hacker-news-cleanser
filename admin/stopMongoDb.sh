@@ -1,8 +1,9 @@
 #!/bin/bash
 
-source config.sh
+export ADMIN_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+source "${ADMIN_DIR}"/init.sh
 
-MONGODB_NOHUP_RUNNING=$(ps -ef | grep "mongod --dbpath $MONGO_DB_DIRECTORY" | grep -v grep)
+MONGODB_NOHUP_RUNNING=$(ps -ef | grep "mongod --dbpath ""$MONGO_DB" | grep -v grep)
 HAS_SERVICE_COMMAND=$(command -v service)
 if [ -n "$HAS_SERVICE_COMMAND" ]; then
     HAS_MONGODB_INITD_SERVICE=$(ls /etc/init.d/mongod 2>/dev/null)
@@ -22,17 +23,20 @@ if [ -n "$MONGODB_NOHUP_RUNNING" ] || [ -n "$MONGODB_SERVICE_RUNNING" ]; then
     elif [ -n "$HAS_MONGODB_SYSTEMCTL_SERVICE" ]; then
         sudo systemctl stop mongod
         SUCCESS=$?
-    else    
-        ps -ef | grep "mongod --dbpath $MONGO_DB_DIRECTORY" | grep -v grep | awk '{print $2}' | xargs kill -9
+    else
+        ps -ef | grep "mongod --dbpath $MONGO_DB" | grep -v grep | awk '{print $2}' | xargs kill -9
         SUCCESS=$?
     fi
 
     if [ $SUCCESS -eq 0 ]; then
         echo -e "${GREEN}MongoDB stopped${RESET}"
+        exit 0
     else
         echo -e "${RED}MongoDB failed to stop${RESET}"
+        exit 1
     fi
 else
-    echo -e "${RED}MongoDB is not running${RESET}"
+    echo "MongoDB is not running"
+    exit 0
 fi
 

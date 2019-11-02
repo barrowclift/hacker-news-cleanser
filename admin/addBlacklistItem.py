@@ -1,5 +1,5 @@
 #!/usr/local/bin/python3
-# 
+#
 # Adds the specified items to the appropriate blacklist collection
 
 import sys
