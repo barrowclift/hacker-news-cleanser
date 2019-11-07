@@ -1,6 +1,6 @@
 # Hacker News Cleanser
 
-This is a self-hosted service that will auto-hide Hacker News articles by filtering articles based on:
+This is a self-hosted service that will auto-hide Hacker News articles by:
 
 * Site
 * Title keywords matching
