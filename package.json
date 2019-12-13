@@ -13,7 +13,7 @@
 		"jsdom": "^11.12.0",
 		"mongodb": "^3.3.2",
 		"nodemailer": "^4.6.4",
-		"npm": "^6.11.2",
+		"npm": "^6.13.4",
 		"properties": "^1.2.1",
 		"request": "^2.83.0",
 		"request-promise": "^4.2.4",
