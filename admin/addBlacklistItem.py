@@ -26,7 +26,7 @@ if args.keyword or args.regex:
 	if args.keyword:
 		keywordsToAdd = []
 		for keyword in args.keyword:
-			exists = len(blacklistedTitlesCollection.find({"keyword":keyword})) != 0
+			exists = blacklistedTitlesCollection.count_documents({"keyword":keyword}) != 0
 			if exists:
 				print("Title keyword \"{}\" is already blacklisted".format(keyword))
 			else:
@@ -39,7 +39,7 @@ if args.keyword or args.regex:
 	if args.regex:
 		regexsToAdd = []
 		for r in args.regex:
-			exists = len(blacklistedTitlesCollection.find({"regex":r})) != 0
+			exists = blacklistedTitlesCollection.count_documents({"regex":r}) != 0
 			if exists:
 				print("Title regex \"{}\" is already blacklisted".format(r))
 			else:
@@ -53,7 +53,7 @@ if args.site:
 	blacklistedSitesCollection = db["blacklistedSites"]
 	sitesToAdd = []
 	for site in args.site:
-		exists = len(blacklistedSitesCollection.find({"site":site})) != 0
+		exists = blacklistedSitesCollection.count_documents({"site":site}) != 0
 		if exists:
 			print("Site \"{}\" is already blacklisted".format(site))
 		else:
@@ -66,7 +66,7 @@ if args.user:
 	blacklistedUsersCollection = db["blacklistedUsers"]
 	usersToAdd = []
 	for user in args.user:
-		exists = len(blacklistedUsersCollection.find({"user":user})) != 0
+		exists = blacklistedUsersCollection.count_documents({"user":user}) != 0
 		if exists:
 			print("User \"{}\" is already blacklisted".format(user))
 		else:
