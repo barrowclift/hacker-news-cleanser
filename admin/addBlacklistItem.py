@@ -26,36 +26,52 @@ if args.keyword or args.regex:
 	if args.keyword:
 		keywordsToAdd = []
 		for keyword in args.keyword:
-			keywordDocument = {
-				"keyword": keyword,
-				"type": "keyword"
-			}
-			keywordsToAdd.append(keywordDocument)
-		blacklistedTitlesCollection.insert_many(keywordsToAdd)
+			exists = len(blacklistedTitlesCollection.find({"keyword":keyword})) != 0
+			if exists:
+				print("Title keyword \"{}\" is already blacklisted".format(keyword))
+			else:
+				keywordDocument = {
+					"keyword": keyword,
+					"type": "keyword"
+				}
+				keywordsToAdd.append(keywordDocument)
+				blacklistedTitlesCollection.insert_many(keywordsToAdd)
 	if args.regex:
 		regexsToAdd = []
 		for r in args.regex:
-			regexDocument = {
-				"regex": r,
-				"type": "regex"
-			}
-			regexsToAdd.append(regexDocument)
-		blacklistedTitlesCollection.insert_many(regexsToAdd)
+			exists = len(blacklistedTitlesCollection.find({"regex":r})) != 0
+			if exists:
+				print("Title regex \"{}\" is already blacklisted".format(r))
+			else:
+				regexDocument = {
+					"regex": r,
+					"type": "regex"
+				}
+				regexsToAdd.append(regexDocument)
+				blacklistedTitlesCollection.insert_many(regexsToAdd)
 if args.site:
 	blacklistedSitesCollection = db["blacklistedSites"]
 	sitesToAdd = []
 	for site in args.site:
-		siteDocument = {
-			"site": site
-		}
-		sitesToAdd.append(siteDocument)
-	blacklistedSitesCollection.insert_many(sitesToAdd)
+		exists = len(blacklistedSitesCollection.find({"site":site})) != 0
+		if exists:
+			print("Site \"{}\" is already blacklisted".format(site))
+		else:
+			siteDocument = {
+				"site": site
+			}
+			sitesToAdd.append(siteDocument)
+			blacklistedSitesCollection.insert_many(sitesToAdd)
 if args.user:
 	blacklistedUsersCollection = db["blacklistedUsers"]
 	usersToAdd = []
 	for user in args.user:
-		userDocument = {
-			"user": user
-		}
-		usersToAdd.append(userDocument)
-	blacklistedUsersCollection.insert_many(usersToAdd)
+		exists = len(blacklistedUsersCollection.find({"user":user})) != 0
+		if exists:
+			print("User \"{}\" is already blacklisted".format(user))
+		else:
+			userDocument = {
+				"user": user
+			}
+			usersToAdd.append(userDocument)
+			blacklistedUsersCollection.insert_many(usersToAdd)

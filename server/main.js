@@ -8,7 +8,8 @@ let path = require("path");
 let MongoClient = require("./MongoClient");
 let Logger = require("./Logger");
 let paths = require("./paths");
-let CleanserProperties = require("./CleanserProperties");
+let PropertyManager = require("./PropertyManager");
+let ReportMailman = require("./ReportMailman");
 let Cleanser = require("./Cleanser");
 
 
@@ -19,9 +20,10 @@ const CLASS_NAME = "main"
 
 // GLOBALS
 // -------
-let cleanserProperties = null;
+let propertyManager = null;
 let mongoClient = null;
 let cleanser = null;
+let mailman = null;
 
 let log = new Logger(CLASS_NAME);
 let propertiesFileName = path.join(paths.SERVER_DIRECTORY_PATH, "cleanser.properties");
@@ -33,16 +35,20 @@ log.info("Starting up...");
 
 async function startup() {
 	// 1. Load properties
-	cleanserProperties = new CleanserProperties();
-	await cleanserProperties.load(propertiesFileName);
+	propertyManager = new PropertyManager();
+	await propertyManager.load(propertiesFileName);
 
 	// 2. Connect to MongoDB
-	mongoClient = new MongoClient(cleanserProperties);
+	mongoClient = new MongoClient(propertyManager);
 	await mongoClient.connect();
 
 	// 3. Start cleanser
-	cleanser = new Cleanser(cleanserProperties, mongoClient);
+	cleanser = new Cleanser(propertyManager, mongoClient);
 	cleanser.start();
+
+    // 4. Start Report Mailman
+    mailman = new ReportMailman(propertyManager, mongoClient);
+    mailman.start();
 }
 
 try {
@@ -81,8 +87,15 @@ try {
 })
 async function shutdown() {
     log.info("Shutting down...");
-    await cleanser.stop();
-    await mongoClient.close();
+    if (cleanser) {
+        await cleanser.stop();
+    }
+    if (mongoClient) {
+        await mongoClient.close();
+    }
+    if (mailman) {
+        await mailman.stop();
+    }
     log.info("Completed shutdown");
     process.exit(0);
 }

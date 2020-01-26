@@ -10,13 +10,13 @@
 		"url": "https://github.com/barrowclift/shelf.git"
 	},
 	"dependencies": {
-		"jsdom": "^11.12.0",
-		"mongodb": "^3.3.2",
-		"nodemailer": "^4.6.4",
-		"npm": "^6.11.2",
+		"jsdom": "^16.0.1",
+		"mongodb": "^3.5.2",
+		"nodemailer": "^6.4.2",
+		"npm": "^6.13.6",
 		"properties": "^1.2.1",
 		"request": "^2.83.0",
-		"request-promise": "^4.2.4",
+		"request-promise": "^4.2.5",
 		"url": "^0.11.0"
 	}
 }

@@ -7,7 +7,7 @@ let path = require("path");
 let Properties = require("properties");
 // Local
 const CLEANSER_ROOT_DIRECTORY_PATH = path.join(__dirname, "..");
-let CleanserProperties = require(path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/CleanserProperties"));
+let PropertyManager = require(path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/PropertyManager"));
 let CachedMongoClient = require(path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/MongoClient"));
 
 
@@ -18,11 +18,11 @@ const PROPERTIES_FILE_NAME = path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/she
 
 // GLOBALS
 // -------
-var cleanserProperties = null;
+var propertyManager = null;
 
 
 async function cleanDbAndClose() {
-    var mongoClient = new CachedMongoClient(cleanserProperties);
+    var mongoClient = new CachedMongoClient(propertyManager);
     await mongoClient.connect();
     await mongoClient.dropCollectionBlacklistedTitles();
     await mongoClient.dropCollectionBlacklistedSites();
@@ -33,8 +33,8 @@ async function cleanDbAndClose() {
 }
 
 async function main() {
-    cleanserProperties = new CleanserProperties();
-    await cleanserProperties.load(PROPERTIES_FILE_NAME);
+    propertyManager = new PropertyManager();
+    await propertyManager.load(PROPERTIES_FILE_NAME);
 
     await cleanDbAndClose();
 }

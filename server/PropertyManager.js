@@ -11,7 +11,7 @@ let util = require("./util");
 
 // CONSTANTS
 // ---------
-const CLASS_NAME = "CleanserProperties";
+const CLASS_NAME = "PropertyManager";
 
 // Property default values
 const DEFAULT_HACKER_NEWS_BASE_URL = "https://news.ycombinator.com";
@@ -53,7 +53,7 @@ let log = new Logger(CLASS_NAME);
  * Thus, letting calling code get back to what's *actually* important to them:
  * their own work.
  */
-class CleanserProperties {
+class PropertyManager {
 
     /**
      * Does not automatically load any properties file, but simply initializes
@@ -202,4 +202,4 @@ class CleanserProperties {
 
 }
 
-module.exports = CleanserProperties;
+module.exports = PropertyManager;

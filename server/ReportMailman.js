@@ -6,6 +6,7 @@
 let nodemailer = require('nodemailer');
 // Local
 let Logger = require("./Logger");
+let util = require("./util");
 
 
 // CONSTANTS
@@ -24,12 +25,15 @@ class ReportMailman {
      * Initializes the report "mailman" that can be used to send out report
      * emails of cleaned stories.
      *
-     * @param {CleanserProperties} shelfProperties
+     * @param {PropertyManager} propertyManager
      * @param {MongoClient} mongoClient
      */
-    constructor(cleanserProperties, mongoClient) {
-        this.cleanserProperties = cleanserProperties;
+    constructor(propertyManager, mongoClient) {
+        this.propertyManager = propertyManager;
         this.mongoClient = mongoClient;
+
+        this.isStopping = false;
+        this.mailmanIntervalId = null;
     }
 
     /**
@@ -37,6 +41,30 @@ class ReportMailman {
      * PUBLIC METHODS
      * ==============
      */
+
+    async start() {
+        log.info("Starting...");
+        const THIS = this;
+
+        // Start the mailman interval to send occassional cleaner reports
+        this.mailmanIntervalId = setInterval(async function() {
+            if (THIS.isStopping) {
+                log.info("Preventing mailman, shutting down...");
+            } else {
+                let shouldSend = await THIS.shouldSend();
+                if (shouldSend) {
+                    await THIS.send();
+                }
+            }
+        }, util.daysToMillis(this.propertyManager.emailReportFrequencyInDays));
+    }
+
+    async stop() {
+        this.isStopping = true;
+        log.info("Stopping...");
+        clearInterval(this.mailmanIntervalId);
+        log.info("Stopped");
+    }
 
     /**
      * Determines whether or not the time since the last report send time has
@@ -47,9 +75,9 @@ class ReportMailman {
      *     the report frequency, otherwise false.
      */
     async shouldSend() {
-        if (!this.cleanserProperties.emailReportEnabled) {
+        if (!this.propertyManager.emailReportEnabled) {
             throw "Email Reports are disabled";
-        } else if (!this.cleanserProperties.requiredEmailReportPropertiesWereProvided()) {
+        } else if (!this.propertyManager.requiredEmailReportPropertiesWereProvided()) {
             throw "Email Reports are enabled but required properties are missing";
         }
 
@@ -71,7 +99,7 @@ class ReportMailman {
              * new report (it's been a whole frequency since last report).
              */
             let lookback = new Date();
-            lookback.setDate(lookback.getDate() - this.cleanserProperties.emailReportFrequencyInDays);
+            lookback.setDate(lookback.getDate() - this.propertyManager.emailReportFrequencyInDays);
             let lastSentTime = new Date(reports[0].sentTime);
             if (lookback.getTime() > lastSentTime.getTime()) {
                 shouldSend = true;
@@ -125,7 +153,7 @@ class ReportMailman {
                 let today = _formatDateToHumanReadableCalendarDate(rightNow);
                 let emailSubject = "Hacker News Cleanser Weekly Report: " + today;
                 let htmlBody = _getHtmlBody(subject,
-                                            this.cleanserProperties.hackerNewsUsername,
+                                            this.propertyManager.hackerNewsUsername,
                                             cleansedStories,
                                             totalStoriesCleansedSinceBeginningOfTime);
 
@@ -135,15 +163,15 @@ class ReportMailman {
                     port: 465,
                     secure: true,
                     auth: {
-                        user: this.cleanserProperties.emailReportSender,
-                        pass: this.cleanserProperties.emailReportSenderPassword
+                        user: this.propertyManager.emailReportSender,
+                        pass: this.propertyManager.emailReportSenderPassword
                     }
                 });
 
                 // Setup email data with unicode symbols
                 let mailOptions = {
-                    from: "\"Hacker News Cleanser\" <" + this.cleanserProperties.emailReportSender + ">",
-                    to: this.cleanserProperties.emailReportRecipients, // Comma delimited list of recievers
+                    from: "\"Hacker News Cleanser\" <" + this.propertyManager.emailReportSender + ">",
+                    to: this.propertyManager.emailReportRecipients, // Comma delimited list of recievers
                     subject: emailSubject,
                     html: htmlBody
                 }

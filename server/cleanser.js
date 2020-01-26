@@ -27,14 +27,12 @@ class Cleanser {
      * Initializes the cleanser, but does not automatically kick it off.
      * To start the cleanser, `start()` must be called.
      *
-     * @param {CleanserProperties} cleanserProperties
+     * @param {PropertyManager} propertyManager
      * @param {MongoClient} mongoClient
      */
-    constructor(cleanserProperties, mongoClient) {
-        this.cleanserProperties = cleanserProperties;
+    constructor(propertyManager, mongoClient) {
+        this.propertyManager = propertyManager;
         this.mongoClient = mongoClient;
-
-        this.reportMailman = new ReportMailman(cleanserProperties, mongoClient);
 
         this.isStopping = false;
         this.currentlyCleansing = false;
@@ -53,28 +51,28 @@ class Cleanser {
 
         // Initializing request templates that the Cleanser will use when started
         this.loginRequest = {
-            url: this.cleanserProperties.hackerNewsBaseUrl + "/login",
+            url: this.propertyManager.hackerNewsBaseUrl + "/login",
             followAllRedirects: true,
             jar: true,
             form: {
-                acct: this.cleanserProperties.hackerNewsUsername,
-                pw: this.cleanserProperties.hackerNewsPassword,
+                acct: this.propertyManager.hackerNewsUsername,
+                pw: this.propertyManager.hackerNewsPassword,
                 goto: "news"
             },
             headers: {
-                "User-Agent": this.cleanserProperties.userAgent
+                "User-Agent": this.propertyManager.userAgent
             }
         }
         this.homePageRequest = {
-            url: this.cleanserProperties.hackerNewsBaseUrl,
+            url: this.propertyManager.hackerNewsBaseUrl,
             followAllRedirects: true,
             jar: true,
             headers: {
-                "User-Agent": this.cleanserProperties.userAgent
+                "User-Agent": this.propertyManager.userAgent
             }
         }
         this.hideRequest = {
-            url: this.cleanserProperties.hackerNewsBaseUrl + "/hide",
+            url: this.propertyManager.hackerNewsBaseUrl + "/hide",
             followAllRedirects: true,
             jar: true,
             form: {
@@ -83,7 +81,7 @@ class Cleanser {
                 auth: ""
             },
             headers: {
-                "User-Agent": this.cleanserProperties.userAgent
+                "User-Agent": this.propertyManager.userAgent
             }
         }
     }
@@ -100,7 +98,7 @@ class Cleanser {
         const THIS = this; // For referencing root-instance "this" in promise context
 
         // 1. Validate that all required properties were provided
-        if (!this.cleanserProperties.requiredPropertiesWereProvided()) {
+        if (!this.propertyManager.requiredPropertiesWereProvided()) {
             throw "Required Hacker News Cleanser properties were not provided, cannot startup";
         }
 
@@ -114,7 +112,7 @@ class Cleanser {
         // 4. Run cleanse so the user doesn't have to wait for the first frequency time to elapse before results.
         await this._cleanse();
 
-        // 5. Finally, let the cleanse interval take over
+        // 5. Finally, kick off the cleanse interval
         this.cleanseIntervalId = setInterval(async function() {
             if (THIS.isStopping) {
                 log.info("Preventing cleanse, shutting down...");
@@ -123,10 +121,10 @@ class Cleanser {
             } else {
                 await THIS._cleanse();
             }
-        }, this.cleanserProperties.cleanserFrequencyInMillis);
+        }, this.propertyManager.cleanserFrequencyInMillis);
     }
 
-    stop() {
+    async stop() {
         this.isStopping = true;
         log.info("Stopping...");
         clearInterval(this.cleanseIntervalId);
@@ -151,7 +149,7 @@ class Cleanser {
         let response = await request.post(this.loginRequest);
         if (response != null) {
             if (response.indexOf("Bad login.") > -1) {
-                log.error("Hacker News login failed, user='" + this.cleanserProperties.hackerNewsUsername + "', pass='" + this.cleanserProperties.hackerNewsPassword + "'");
+                log.error("Hacker News login failed, user='" + this.propertyManager.hackerNewsUsername + "', pass='" + this.propertyManager.hackerNewsPassword + "'");
                 throw "Hacker News login failed";
             } else if (response.indexOf("Validation required.") > -1) {
                 log.error("Hacker News login failed, too many bad login attempts, Hacker News now requesting Recaptcha validation. Unfortunately, the only way to fix this is time; please ensure your credentials are correct then try again at a later time.");
@@ -160,8 +158,8 @@ class Cleanser {
         }
         this.lastAuthRefreshTime = new Date();
 
-        let frequencyString = this.cleanserProperties.cleanserFrequencyInMinutes + " minutes";
-        if (this.cleanserProperties.cleanserFrequencyInMinutes == 1) {
+        let frequencyString = this.propertyManager.cleanserFrequencyInMinutes + " minutes";
+        if (this.propertyManager.cleanserFrequencyInMinutes == 1) {
             frequencyString = "minute";
         }
         log.info("Login successful, will cleanse Hacker News every " + frequencyString);
@@ -281,7 +279,7 @@ class Cleanser {
                     if (new RegExp("\\b" + titleDocument.keyword + "\\b", "i").test(title)) {
                         return {
                             shouldCleanse: true,
-                            cleansedBy: this.cleanserProperties.collectionBlacklistedTitles
+                            cleansedBy: this.propertyManager.collectionBlacklistedTitles
                         };
                     }
                 } else if ("regex" == titleDocument.type) {
@@ -290,7 +288,7 @@ class Cleanser {
                             if (new RegExp(titleDocument.regex).test(title)) {
                                 return {
                                     shouldCleanse: true,
-                                    cleansedBy: this.cleanserProperties.collectionBlacklistedTitles
+                                    cleansedBy: this.propertyManager.collectionBlacklistedTitles
                                 };
                             }
                         } catch (error) {
@@ -308,7 +306,7 @@ class Cleanser {
                 if (siteDocument.site == source) {
                     return {
                         shouldCleanse: true,
-                        cleansedBy: this.cleanserProperties.collectionBlacklistedSites
+                        cleansedBy: this.propertyManager.collectionBlacklistedSites
                     };
                 }
             }
@@ -320,7 +318,7 @@ class Cleanser {
                 if (userDocument.user == user) {
                     return {
                         shouldCleanse: true,
-                        cleansedBy: this.cleanserProperties.collectionBlacklistedUsers
+                        cleansedBy: this.propertyManager.collectionBlacklistedUsers
                     };
                 }
             }

@@ -6,7 +6,6 @@
 let mongodb = require("mongodb");
 // Local
 let Logger = require("./Logger");
-let CleanserProperties = require("./CleanserProperties");
 
 
 // CONSTANTS
@@ -26,10 +25,10 @@ let log = new Logger(CLASS_NAME);
 class MongoClient {
 
     /**
-     * @param {CleanserProperties} cleanserProperties
+     * @param {PropertyManager} propertyManager
      */
-    constructor(cleanserProperties) {
-        this.cleanserProperties = cleanserProperties;
+    constructor(propertyManager) {
+        this.propertyManager = propertyManager;
         this.mongo = null;
 
         log.debug("Initialized");
@@ -41,18 +40,18 @@ class MongoClient {
      * ==============
      */
 
-    connect() {
+    async connect() {
         const THIS = this; // For referencing root-instance "this" in promises
-        let mongoServerUrl = "mongodb://" + this.cleanserProperties.mongoHost + ":" + this.cleanserProperties.mongoPort + "/" + this.cleanserProperties.db;
+        let mongoServerUrl = "mongodb://" + this.propertyManager.mongoHost + ":" + this.propertyManager.mongoPort + "/" + this.propertyManager.db;
         log.info("Connecting to Mongo at " + mongoServerUrl);
         return new Promise(function(resolve, reject) {
             mongodb.MongoClient.connect(
                 mongoServerUrl, { useNewUrlParser: true,
                                   useUnifiedTopology: true }
             ).then(function(connection) {
-                log.info("Connection to Mongo server at " + THIS.cleanserProperties.mongoHost + ":" + THIS.cleanserProperties.mongoPort + " established");
+                log.info("Connection to Mongo server at " + THIS.propertyManager.mongoHost + ":" + THIS.propertyManager.mongoPort + " established");
                 THIS.connection = connection;
-                THIS.mongo = connection.db(THIS.cleanserProperties.db);
+                THIS.mongo = connection.db(THIS.propertyManager.db);
                 resolve();
             }).catch(function(error) {
                 reject(Error(error));
@@ -60,7 +59,7 @@ class MongoClient {
         });
     }
 
-    close() {
+    async close() {
         const THIS = this; // For referencing root-instance "this" in promises
         log.debug("Closing Mongo connection...");
         return new Promise(function(resolve, reject) {
@@ -104,10 +103,10 @@ class MongoClient {
         });
     }
     findWeeklyReportLogs(query, sortQuery) {
-        return this.find(this.cleanserProperties.collectionWeeklyReportsLog, query, sortQuery);
+        return this.find(this.propertyManager.collectionWeeklyReportsLog, query, sortQuery);
     }
     findCleansedItems(query, sortQuery) {
-        return this.find(this.cleanserProperties.collectionCleansedItems, query, sortQuery);
+        return this.find(this.propertyManager.collectionCleansedItems, query, sortQuery);
     }
 
     /**
@@ -119,13 +118,13 @@ class MongoClient {
         return this.find(collectionName, {});
     }
     findAllBlacklistedTitles() {
-        return this.find(this.cleanserProperties.collectionBlacklistedTitles, {});
+        return this.find(this.propertyManager.collectionBlacklistedTitles, {});
     }
     findAllBlacklistedSites() {
-        return this.find(this.cleanserProperties.collectionBlacklistedSites, {});
+        return this.find(this.propertyManager.collectionBlacklistedSites, {});
     }
     findAllBlacklistedUsers() {
-        return this.find(this.cleanserProperties.collectionBlacklistedUsers, {});
+        return this.find(this.propertyManager.collectionBlacklistedUsers, {});
     }
 
     /**
@@ -157,10 +156,10 @@ class MongoClient {
         });
     }
     insertWeeklyReportLog(documentToInsert) {
-        return this.insertOne(this.cleanserProperties.collectionWeeklyReportsLog, documentToInsert);
+        return this.insertOne(this.propertyManager.collectionWeeklyReportsLog, documentToInsert);
     }
     insertCleansedStory(documentToInsert) {
-        return this.insertOne(this.cleanserProperties.collectionCleansedItems, documentToInsert);
+        return this.insertOne(this.propertyManager.collectionCleansedItems, documentToInsert);
     }
 
     /**
@@ -213,19 +212,19 @@ class MongoClient {
         });
     }
     dropCollectionBlacklistedTitles() {
-        return this.dropCollection(this.cleanserProperties.collectionBlacklistedTitles);
+        return this.dropCollection(this.propertyManager.collectionBlacklistedTitles);
     }
     dropCollectionBlacklistedSites() {
-        return this.dropCollection(this.cleanserProperties.collectionBlacklistedSites);
+        return this.dropCollection(this.propertyManager.collectionBlacklistedSites);
     }
     dropCollectionBlacklistedUsers() {
-        return this.dropCollection(this.cleanserProperties.collectionBlacklistedUsers);
+        return this.dropCollection(this.propertyManager.collectionBlacklistedUsers);
     }
     dropCollectionCleansedItems() {
-        return this.dropCollection(this.cleanserProperties.collectionCleansedItems);
+        return this.dropCollection(this.propertyManager.collectionCleansedItems);
     }
     dropCollectionWeeklyReportsLog() {
-        return this.dropCollection(this.cleanserProperties.collectionWeeklyReportsLog);
+        return this.dropCollection(this.propertyManager.collectionWeeklyReportsLog);
     }
 
     /**
@@ -261,7 +260,7 @@ class MongoClient {
         return this.count(collectionName, {});
     }
     countAllCleansedItems() {
-        return this.countAll(this.cleanserProperties.collectionCleansedItems);
+        return this.countAll(this.propertyManager.collectionCleansedItems);
     }
 
 }
