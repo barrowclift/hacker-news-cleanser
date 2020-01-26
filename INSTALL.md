@@ -9,6 +9,7 @@ The following instructions have been tested on macOS (for development) and CentO
 * [node.js](https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-a-centos-7-server): I used v10.9.0, though newer versions should be fine. Older versions may or may not work.
 * [mongod](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-red-hat/#configure-the-package-management-system-yum): I used v4.0.13, though newer versions should be fine. Older versions may or may not work.
 * The [pm2](http://pm2.keymetrics.io) process manager for node.js. I used v3.0.4, though newer versions should be fine. Older versions may or may not work.
+* (For optional `addBlacklistItem.py` admin script) [python](https://www.python.org) & [pip](https://pypi.org/project/pip/). Once in place, install the [pymongo](https://api.mongodb.com/python/current/) package with `pip install pymongo` (Version 3.10.1 or newer required). Python 3 (not 2.7) is implied, as 2 is end of life.
 
 ## Setup
 
