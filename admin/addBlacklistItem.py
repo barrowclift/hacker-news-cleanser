@@ -35,7 +35,8 @@ if args.keyword or args.regex:
 					"type": "keyword"
 				}
 				keywordsToAdd.append(keywordDocument)
-				blacklistedTitlesCollection.insert_many(keywordsToAdd)
+		if keywordsToAdd:
+			blacklistedTitlesCollection.insert_many(keywordsToAdd)
 	if args.regex:
 		regexsToAdd = []
 		for r in args.regex:
@@ -48,7 +49,8 @@ if args.keyword or args.regex:
 					"type": "regex"
 				}
 				regexsToAdd.append(regexDocument)
-				blacklistedTitlesCollection.insert_many(regexsToAdd)
+		if regexsToAdd:
+			blacklistedTitlesCollection.insert_many(regexsToAdd)
 if args.site:
 	blacklistedSitesCollection = db["blacklistedSites"]
 	sitesToAdd = []
@@ -61,7 +63,8 @@ if args.site:
 				"site": site
 			}
 			sitesToAdd.append(siteDocument)
-			blacklistedSitesCollection.insert_many(sitesToAdd)
+	if sitesToAdd:
+		blacklistedSitesCollection.insert_many(sitesToAdd)
 if args.user:
 	blacklistedUsersCollection = db["blacklistedUsers"]
 	usersToAdd = []
@@ -74,4 +77,5 @@ if args.user:
 				"user": user
 			}
 			usersToAdd.append(userDocument)
-			blacklistedUsersCollection.insert_many(usersToAdd)
+	if usersToAdd:
+		blacklistedUsersCollection.insert_many(usersToAdd)
