@@ -136,20 +136,16 @@ class MongoClient {
         let collection = this.mongo.collection(collectionName);
         return new Promise(function(resolve, reject) {
             if (collection && documentToInsert) {
-                if ("_id" in documentToInsert) {
-                    collection.insertOne({ _id: documentToInsert._id },
-                                         { upsert: true },
-                                         function(error) {
-                        if (error) {
-                            reject(Error(error));
-                        } else {
-                            log.debug("Inserted one document, _id=" + documentToInsert._id + ", collectionName=" + collectionName);
-                            resolve();
-                        }
-                    });
-                } else {
-                    reject(Error("Invalid document, missing required '_id' field"));
-                }
+                collection.insertOne({ _id: documentToInsert._id },
+                                     { upsert: true },
+                                     function(error) {
+                    if (error) {
+                        reject(Error(error));
+                    } else {
+                        log.debug("Inserted one document, _id=" + documentToInsert._id + ", collectionName=" + collectionName);
+                        resolve();
+                    }
+                });
             } else {
                 reject(Error("Invalid insertOne arguments, document='" + documentToInsert + "', collectionName=" + collectionName));
             }

@@ -7,7 +7,6 @@ let Jsdom = require("jsdom").JSDOM;
 let request = require("request-promise");
 // Local
 let Logger = require("./Logger");
-let ReportMailman = require("./ReportMailman");
 let util = require("./util");
 
 
