@@ -13,7 +13,7 @@ if [ -n "$SERVER_RUNNING" ]; then
     echo -e "Server already running"
 else
     if [ "$USE_PM2" = true ] ; then
-        pm2 --log "${LOGS_DIR}"/server.log --name shelf --silent start "${SERVER_DIR}"/main.js
+        pm2 --log "${LOGS_DIR}"/server.log --name hackerNewsCleanser --silent start "${SERVER_DIR}"/main.js
     else
         nohup node "${SERVER_DIR}"/main.js > "$LOGS_DIR"/server.log 2>&1 &
     fi

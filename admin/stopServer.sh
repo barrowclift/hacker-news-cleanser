@@ -7,7 +7,7 @@ SERVER_RUNNING=$(ps -ef | grep "node ""${SERVER_DIR}" | grep -v grep)
 
 if [ -n "$SERVER_RUNNING" ]; then
     if [ "$USE_PM2" = true ] ; then
-        pm2 --silent stop shelf
+        pm2 --silent stop hackerNewsCleanser
     else
         ps -ef | grep "node ""${SERVER_DIR}""/main.js" | grep -v grep | awk '{print $2}' | xargs kill -9
     fi
