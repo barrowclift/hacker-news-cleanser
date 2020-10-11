@@ -136,8 +136,8 @@ class MongoClient {
         let collection = this.mongo.collection(collectionName);
         return new Promise(function(resolve, reject) {
             if (collection && documentToInsert) {
-                collection.insertOne({ _id: documentToInsert._id },
-                                     { upsert: true },
+                collection.insertOne(documentToInsert,
+                                     { upsert: false },
                                      function(error) {
                     if (error) {
                         reject(Error(error));
