@@ -14,3 +14,5 @@ The following instructions have been tested on macOS (for development) and CentO
 ## Setup
 
 After preparing the requirements and cloning a copy of the project from Github, some minor configuration is required in `server/cleanser.properties`. Please set your credentials for the `hacker.news.username` and `hacker.news.password` properties, and set the other optional ones to your liking.
+
+Additionally, you'll need to decide a directory you want Mongo to use for writing the Hacker News Cleanser DB. Once you've decided on a location, set that full directory path to `MONGO_DB` in `admin/init.sh`. If you want to create a directory somewhere that typically requires root permissions (such as in `/var/lib`), you **must** manually create the directory with the necessary permissions in advance with a command such as `sudo mkdir /var/lib/mongo ; sudo chown -R $(whoami) /var/lib/mongo`. Alternatively, you can choose a directory your user account is guarenteed to have write permissions to, such somewhere in your home directory.
