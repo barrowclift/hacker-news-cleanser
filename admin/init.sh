@@ -8,6 +8,6 @@ export GREEN='\033[0;32m'
 export REPO=$(dirname "${ADMIN_DIR}")
 export SERVER_DIR="${REPO}"/server
 export LOGS_DIR="${REPO}"/logs
-export MONGO_DB=/var/lib/mongo
+export MONGO_DB=set/me/somewhere
 
 export USE_PM2=true
