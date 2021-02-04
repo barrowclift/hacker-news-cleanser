@@ -91,8 +91,8 @@ class ReportMailman {
         let reports = await this.mongoClient.findWeeklyReportLogs(FIND_QUERY, REPORT_SORT_QUERY);
         let shouldSend = false;
 
-        // We've send at least one report in the past
-        if (reports.length > 0) {
+        // We've sent at least one report in the past
+        if (reports && reports.length > 0) {
             /**
              * Creating a Date instance exactly one frequency ago. If this date is
              * still after the last report's send time, then it's time to send a
@@ -240,7 +240,7 @@ class ReportMailman {
         // By default, no stories cleansed since last report
         let storiesSinceLastReport = [];
 
-        // We've send at least one report in the past
+        // We've sent at least one report in the past
         if (reports.length > 0) {
             let lastSentTime = new Date(reports[0].sentTime);
             let allStoriesSinceLastReportQuery = {
