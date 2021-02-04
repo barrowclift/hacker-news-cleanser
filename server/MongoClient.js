@@ -41,30 +41,28 @@ class MongoClient {
      */
 
     async connect() {
-        const THIS = this; // For referencing root-instance "this" in promises
         let mongoServerUrl = "mongodb://" + this.propertyManager.mongoHost + ":" + this.propertyManager.mongoPort + "/" + this.propertyManager.db;
         log.info("Connecting to Mongo at " + mongoServerUrl);
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             mongodb.MongoClient.connect(
                 mongoServerUrl, { useNewUrlParser: true,
                                   useUnifiedTopology: true }
-            ).then(function(connection) {
-                log.info("Connection to Mongo server at " + THIS.propertyManager.mongoHost + ":" + THIS.propertyManager.mongoPort + " established");
-                THIS.connection = connection;
-                THIS.mongo = connection.db(THIS.propertyManager.db);
+            ).then((connection) => {
+                log.info("Connection to Mongo server at " + this.propertyManager.mongoHost + ":" + this.propertyManager.mongoPort + " established");
+                this.connection = connection;
+                this.mongo = connection.db(this.propertyManager.db);
                 resolve();
-            }).catch(function(error) {
+            }).catch((error) => {
                 reject(Error(error));
             });
         });
     }
 
     async close() {
-        const THIS = this; // For referencing root-instance "this" in promises
         log.debug("Closing Mongo connection...");
-        return new Promise(function(resolve, reject) {
-            if (THIS.connection) {
-                THIS.connection.close();
+        return new Promise((resolve, reject) => {
+            if (this.connection) {
+                this.connection.close();
                 log.info("Closed Mongo connection");
             } else {
                 log.warn("Connection already closed");
@@ -84,9 +82,9 @@ class MongoClient {
         }
 
         let collection = this.mongo.collection(collectionName);
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             if (collection && query != null) {
-                collection.find(query).sort(sortQuery).toArray(function(error, documents) {
+                collection.find(query).sort(sortQuery).toArray((error, documents) => {
                     if (error) {
                         reject(Error(error));
                     } else if (!documents || documents.length == 0) {
@@ -134,11 +132,11 @@ class MongoClient {
      */
     insertOne(collectionName, documentToInsert) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             if (collection && documentToInsert) {
                 collection.insertOne(documentToInsert,
                                      { upsert: false },
-                                     function(error) {
+                                     (error) => {
                     if (error) {
                         reject(Error(error));
                     } else {
@@ -165,10 +163,10 @@ class MongoClient {
      */
     deleteById(collectionName, id) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             if (collection && id) {
                 collection.deleteOne({ _id: id },
-                                     function(error) {
+                                     (error) => {
                     if (error) {
                         reject(Error(error));
                     } else {
@@ -189,9 +187,9 @@ class MongoClient {
      */
     dropCollection(collectionName) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             if (collection) {
-                collection.drop(function(error) {
+                collection.drop((error) => {
                     if (error) {
                         if (error.code == 26) {
                             resolve("Collection doesn't exist, collectionName=" + collectionName);
@@ -231,10 +229,10 @@ class MongoClient {
      */
     count(collectionName, query) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             if (collection && query != null) {
                 collection.find(query)
-                          .count(function(error, count) {
+                          .count((error, count) => {
                     if (error) {
                         reject(Error(error));
                     } else {

@@ -182,13 +182,11 @@ class PropertyManager {
      */
 
     async _load(filename) {
-        const THIS = this; // For referencing root-instance "this" in promise context
-
         // The properties package does not currently support promises natively
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
             nodePropertyLoader.parse(filename,
                                      { path: true },
-                                     function(error, properties) {
+                                     (error, properties) => {
                 if (error) {
                     log.error("loadProperties", "An error occurred while loading properties");
                     reject(Error(error));

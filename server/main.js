@@ -72,14 +72,14 @@ try {
  "SIGSEGV",
  "SIGUSR2",
  "SIGTERM"
-].forEach(function(signal) {
+].forEach((signal) => {
     // Catching & handling all terminating signals
-    process.on(signal, function() {
+    process.on(signal, () => {
         log.info("Received signal=" + signal);
         shutdown();
 
         // Force a shutdown anyway if still alive after ten seconds
-        setTimeout(function() {
+        setTimeout(() => {
             log.warn("Shutdown still not complete, forcing shutdown... NOW");
             process.exit(1);
         }, 10000);

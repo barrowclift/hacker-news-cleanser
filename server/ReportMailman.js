@@ -44,16 +44,15 @@ class ReportMailman {
 
     async start() {
         log.info("Starting...");
-        const THIS = this;
 
         // Start the mailman interval to send occassional cleaner reports
-        this.mailmanIntervalId = setInterval(async function() {
-            if (THIS.isStopping) {
+        this.mailmanIntervalId = setInterval(async () => {
+            if (this.isStopping) {
                 log.info("Preventing mailman, shutting down...");
             } else {
-                let shouldSend = await THIS.shouldSend();
+                let shouldSend = await this.shouldSend();
                 if (shouldSend) {
-                    await THIS.send();
+                    await this.send();
                 }
             }
         }, util.daysToMillis(this.propertyManager.emailReportFrequencyInDays));

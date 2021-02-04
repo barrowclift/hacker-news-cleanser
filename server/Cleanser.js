@@ -94,8 +94,6 @@ class Cleanser {
     async start() {
         log.info("Starting...");
 
-        const THIS = this; // For referencing root-instance "this" in promise context
-
         // 1. Validate that all required properties were provided
         if (!this.propertyManager.requiredPropertiesWereProvided()) {
             throw "Required Hacker News Cleanser properties were not provided, cannot startup";
@@ -112,13 +110,13 @@ class Cleanser {
         await this._cleanse();
 
         // 5. Finally, kick off the cleanse interval
-        this.cleanseIntervalId = setInterval(async function() {
-            if (THIS.isStopping) {
+        this.cleanseIntervalId = setInterval(async () => {
+            if (this.isStopping) {
                 log.info("Preventing cleanse, shutting down...");
-            } else if (THIS.currentlyCleansing) {
+            } else if (this.currentlyCleansing) {
                 log.info("Skipping cleanse, still processing previous one...");
             } else {
-                await THIS._cleanse();
+                await this._cleanse();
             }
         }, this.propertyManager.cleanserFrequencyInMillis);
     }
@@ -165,8 +163,6 @@ class Cleanser {
     }
 
     async _cleanse() {
-        const THIS = this; // For referencing root-instance "this" in promise context
-
         let homePage = await this._getHomePage();
         if (!homePage) {
             return;
@@ -212,7 +208,7 @@ class Cleanser {
                 }
 
                 // "verdict" is a JSON of boolean "shouldCleanse" and string "cleansedBy";
-                let verdict = await THIS._shouldCleanseStory(title, user, source);
+                let verdict = await this._shouldCleanseStory(title, user, source);
                 if (verdict.shouldCleanse) {
                     log.info("Cleansing story, title=\"" + title + "\" from " + source);
 
@@ -222,7 +218,7 @@ class Cleanser {
                     for (let link of actionRowLinks) {
                         if ("hide" == link.textContent) {
                             let hideLink = link.getAttribute("href");
-                            authForStory = THIS._getParameterByName("auth", hideLink);
+                            authForStory = this._getParameterByName("auth", hideLink);
                             break;
                         }
                     }
@@ -242,8 +238,8 @@ class Cleanser {
                         link: storyLink,
                         hideTime: new Date().getTime()
                     };
-                    await THIS.mongoClient.insertCleansedStory(cleansedStoryDocument);
-                    await THIS._hideStory(idOfCurrentStory, authForStory);
+                    await this.mongoClient.insertCleansedStory(cleansedStoryDocument);
+                    await this._hideStory(idOfCurrentStory, authForStory);
                     cleansedAtLeastOneStory = true;
                 }
 
