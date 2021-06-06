@@ -279,7 +279,7 @@ class ReportMailman {
             <tr>
                 <td colspan="2"></td>
                 <td class="subtext">
-                    Originally shared by <a href="https://news.ycombinator.com/user?id=` + story.user + `" class="hnuser">` + story.user + `</a> at <span class="age"><a href="https://news.ycombinator.com/item?id=` + story.storyId + `">` + humanReadableHideTime + `</a></span>
+                    Originally shared by <a href="https://news.ycombinator.com/user?id=` + story.user + `" class="hnuser">` + story.user + `</a> at <span class="age"><a href="https://news.ycombinator.com/item?id=` + story._id + `">` + humanReadableHideTime + `</a></span>
             </tr>
             <tr class="spacer" style="height:6px"></tr>
             `;
