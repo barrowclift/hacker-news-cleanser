@@ -13,7 +13,9 @@ The following instructions have been tested on macOS (for development) and CentO
 
 ## Setup
 
-After preparing the requirements and cloning a copy of the project from Github, some minor configuration is required in `server/cleanser.properties`. Please set your credentials for the `hacker.news.username` and `hacker.news.password` properties, and set the other optional ones to your liking.
+After preparing the requirements and cloning a copy of the project from Github, you'll first want to execute `npm install` in the project's root to download the various required packages.
+
+Then, some minor configuration is required in `server/cleanser.properties`. Please set your credentials for the `hacker.news.username` and `hacker.news.password` properties, and set the other optional ones to your liking.
 
 Next, run `npm install` in the project's root directory to pull all Hacker News Cleanser's dependencies.
 
