@@ -7,7 +7,7 @@ This is a self-hosted service that will auto-hide Hacker News articles by:
 * Title regex matching
 * Username
 
-You can download the latest release [here](https://github.com/barrowclift/hacker-news-cleanser/releases/tag/v2.1)
+You can download the latest release [here](https://github.com/barrowclift/hacker-news-cleanser/releases/tag/v2.5)
 
 ## Why This Exists
 
