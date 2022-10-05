@@ -200,7 +200,7 @@ class Cleanser {
                 if (sourceElement) {
                     source = sourceElement.textContent;
                 } else {
-                    log.error("_cleanse", "Unable to find the story's source site");
+                    log.debug("d", "Item '" + title + ' is a self post (no site link)');
                 }
             } else if (nowCheckingStory) {
                 nowCheckingStory = false;
