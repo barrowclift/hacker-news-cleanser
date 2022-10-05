@@ -186,17 +186,21 @@ class Cleanser {
 
                 idOfCurrentStory = row.getAttribute("id");
 
-                let titleElement = row.querySelector("a.storylink")
+                let titleElement = row.querySelector("span.titleline > a")
                 title = "Untitled";
                 storyLink = "#";
                 if (titleElement) {
                     title = titleElement.textContent;
                     storyLink = titleElement.getAttribute("href");
+                } else {
+                    log.error("_cleanse", "Unable to find the story link & title");
                 }
                 let sourceElement = row.querySelector("span.sitestr");
                 source = "self";
                 if (sourceElement) {
                     source = sourceElement.textContent;
+                } else {
+                    log.error("_cleanse", "Unable to find the story's source site");
                 }
             } else if (nowCheckingStory) {
                 nowCheckingStory = false;
@@ -205,6 +209,8 @@ class Cleanser {
                 let user = "anonymous";
                 if (userElement) {
                     user = userElement.textContent;
+                } else {
+                    log.error("_cleanse", "Unable to find the story's user");
                 }
 
                 // "verdict" is a JSON of boolean "shouldCleanse" and string "cleansedBy";

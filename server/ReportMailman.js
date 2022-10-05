@@ -97,8 +97,7 @@ class ReportMailman {
              * still after the last report's send time, then it's time to send a
              * new report (it's been a whole frequency since last report).
              */
-            let lookback = new Date();
-            lookback.setDate(lookback.getDate() - this.propertyManager.emailReportFrequencyInDays);
+            let lookback = new Date(new Date().getTime() - this.propertyManager.emailReportFrequencyInDays);
             let lastSentTime = new Date(reports[0].sentTime);
             if (lookback.getTime() > lastSentTime.getTime()) {
                 shouldSend = true;
