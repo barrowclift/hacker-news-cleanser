@@ -244,8 +244,12 @@ class Cleanser {
                         link: storyLink,
                         hideTime: new Date().getTime()
                     };
-                    await this.mongoClient.insertCleansedStory(cleansedStoryDocument);
-                    await this._hideStory(idOfCurrentStory, authForStory);
+                    try {
+                        await this._hideStory(idOfCurrentStory, authForStory);
+                        await this.mongoClient.insertCleansedStory(cleansedStoryDocument);
+                    } catch (error) {
+                        log.error("_cleanse", "Failed to cleanse Hacker News story, error=" + error);
+                    }
                     cleansedAtLeastOneStory = true;
                 }
 

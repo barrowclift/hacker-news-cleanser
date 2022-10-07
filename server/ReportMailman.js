@@ -118,7 +118,11 @@ class ReportMailman {
             let sentTimeDocument = {
                 sentTime: lastSentTime.getTime()
             }
-            await this.mongoClient.insertWeeklyReportLog(sentTimeDocument);
+            try {
+                await this.mongoClient.insertWeeklyReportLog(sentTimeDocument);
+            } catch (error) {
+                log.error("shouldSend", "Failed to persist first Weekly Report Log, error=" + error);
+            }
 
             shouldSend = false;
         }
