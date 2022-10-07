@@ -207,15 +207,17 @@ class Cleanser {
 
                 let userElement = row.querySelector("a.hnuser");
                 let user = "anonymous";
+                let isAd = false;
                 if (userElement) {
                     user = userElement.textContent;
                 } else {
-                    log.error("_cleanse", "Unable to find the story's user");
+                    isAd = true;
+                    log.info("Found an ad!");
                 }
 
                 // "verdict" is a JSON of boolean "shouldCleanse" and string "cleansedBy";
                 let verdict = await this._shouldCleanseStory(title, user, source);
-                if (verdict.shouldCleanse) {
+                if (verdict.shouldCleanse || isAd) {
                     log.info("Cleansing story, title=\"" + title + "\" from " + source);
 
                     // Extracting auth token from "hide" href link
