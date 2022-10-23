@@ -130,12 +130,12 @@ class MongoClient {
      * increased safety and ease of use. This method has strict "insert"
      * behavior (no updates).
      */
-    insertOne(collectionName, documentToInsert) {
+    insertOne(collectionName, documentToInsert, upsert) {
         let collection = this.mongo.collection(collectionName);
         return new Promise((resolve, reject) => {
             if (collection && documentToInsert) {
                 collection.insertOne(documentToInsert,
-                                     { upsert: false },
+                                     { upsert },
                                      (error) => {
                     if (error) {
                         reject(Error(error));
@@ -153,7 +153,7 @@ class MongoClient {
         return this.insertOne(this.propertyManager.collectionWeeklyReportsLog, documentToInsert);
     }
     insertCleansedStory(documentToInsert) {
-        return this.insertOne(this.propertyManager.collectionCleansedItems, documentToInsert);
+        return this.insertOne(this.propertyManager.collectionCleansedItems, documentToInsert, true);
     }
 
     /**
