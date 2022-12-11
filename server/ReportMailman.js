@@ -47,15 +47,9 @@ class ReportMailman {
 
         // Start the mailman interval to send occassional cleaner reports
         this.mailmanIntervalId = setInterval(async () => {
-            if (this.isStopping) {
-                log.info("Preventing mailman, shutting down...");
-            } else {
-                let shouldSend = await this.shouldSend();
-                if (shouldSend) {
-                    await this.send();
-                }
-            }
+            await this.intervalProcess();
         }, util.daysToMillis(this.propertyManager.emailReportFrequencyInDays));
+        await this.intervalProcess();
     }
 
     async stop() {
@@ -63,6 +57,17 @@ class ReportMailman {
         log.info("Stopping...");
         clearInterval(this.mailmanIntervalId);
         log.info("Stopped");
+    }
+
+    async intervalProcess() {
+        if (this.isStopping) {
+            log.info("Preventing mailman, shutting down...");
+        } else {
+            let shouldSend = await this.shouldSend();
+            if (shouldSend) {
+                await this.send();
+            }
+        }
     }
 
     /**
@@ -97,7 +102,7 @@ class ReportMailman {
              * still after the last report's send time, then it's time to send a
              * new report (it's been a whole frequency since last report).
              */
-            let lookback = new Date(new Date().getTime() - this.propertyManager.emailReportFrequencyInDays);
+            let lookback = new Date(new Date().getTime() - util.daysToMillis(this.propertyManager.emailReportFrequencyInDays));
             let lastSentTime = new Date(reports[0].sentTime);
             if (lookback.getTime() > lastSentTime.getTime()) {
                 shouldSend = true;
