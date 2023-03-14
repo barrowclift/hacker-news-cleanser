@@ -282,7 +282,14 @@ class Cleanser {
         let blacklistedTitles = await this.mongoClient.findAllBlacklistedTitles();
         if (blacklistedTitles) {
             for (let titleDocument of blacklistedTitles) {
-                if ("keyword" == titleDocument.type) {
+                if ("text" == titleDocument.type) {
+                    if (title.toUpperCase().indexOf(titleDocument.text.toUpperCase()) > -1) {
+                        return {
+                            shouldCleanse: true,
+                            cleansedBy: this.propertyManager.collectionBlacklistedTitles
+                        };
+                    }
+                } else if ("keyword" == titleDocument.type) {
                     if (new RegExp("\\b" + titleDocument.keyword + "\\b", "i").test(title)) {
                         return {
                             shouldCleanse: true,
