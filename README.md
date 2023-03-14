@@ -3,11 +3,12 @@
 This is a self-hosted service that will auto-hide Hacker News articles by:
 
 * Site
-* Title keywords matching
+* Title text matching
+* Title keyword matching
 * Title regex matching
 * Username
 
-You can download the latest release [here](https://github.com/barrowclift/hacker-news-cleanser/releases/tag/v2.6)
+You can download the latest release [here](https://github.com/barrowclift/hacker-news-cleanser/releases/latest)
 
 ## Why This Exists
 
