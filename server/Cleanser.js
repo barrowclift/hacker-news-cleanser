@@ -3,11 +3,12 @@
 // DEPENDENCIES
 // ------------
 // External
-let Jsdom = require("jsdom").JSDOM;
-let request = require("request-promise");
+import { JSDOM } from "jsdom";
+import got from "got";
+import { CookieJar } from "tough-cookie";
 // Local
-let Logger = require("./Logger");
-let util = require("./util");
+import Logger from "./Logger.js";
+import util from "./util.js";
 
 
 // CONSTANTS
@@ -20,7 +21,7 @@ const CLASS_NAME = "Cleanser";
 let log = new Logger(CLASS_NAME);
 
 
-class Cleanser {
+export default class Cleanser {
 
     /**
      * Initializes the cleanser, but does not automatically kick it off.
@@ -48,11 +49,15 @@ class Cleanser {
          */
         this.ignoredRegexes = new Set();
 
-        // Initializing request templates that the Cleanser will use when started
-        this.loginRequest = {
-            url: this.propertyManager.hackerNewsBaseUrl + "/login",
-            followAllRedirects: true,
-            jar: true,
+        // Default options to be applied regardless of the request
+        this.gotClient = got.extend({
+            prefixUrl: this.propertyManager.hackerNewsBaseUrl,
+            cookieJar: new CookieJar()
+        });
+
+        // Initializing option templates that the Cleanser will use when started
+        this.loginOptions = {
+            followRedirect: true,
             form: {
                 acct: this.propertyManager.hackerNewsUsername,
                 pw: this.propertyManager.hackerNewsPassword,
@@ -62,18 +67,14 @@ class Cleanser {
                 "User-Agent": this.propertyManager.userAgent
             }
         }
-        this.homePageRequest = {
-            url: this.propertyManager.hackerNewsBaseUrl,
-            followAllRedirects: true,
-            jar: true,
+        this.homePageOptions = {
+            followRedirect: true,
             headers: {
                 "User-Agent": this.propertyManager.userAgent
             }
         }
-        this.hideRequest = {
-            url: this.propertyManager.hackerNewsBaseUrl + "/hide",
-            followAllRedirects: true,
-            jar: true,
+        this.hideOptions = {
+            followRedirect: true,
             form: {
                 id: "",
                 goto: "news",
@@ -143,12 +144,12 @@ class Cleanser {
     async _login() {
         log.info("Logging into Hacker News");
 
-        let response = await request.post(this.loginRequest);
+        let response = await this.gotClient.post("login", this.loginOptions);
         if (response != null) {
-            if (response.indexOf("Bad login.") > -1) {
+            if (response.body.indexOf("Bad login.") > -1) {
                 log.error("Hacker News login failed, user='" + this.propertyManager.hackerNewsUsername + "', pass='" + this.propertyManager.hackerNewsPassword + "'");
                 throw "Hacker News login failed";
-            } else if (response.indexOf("Validation required.") > -1) {
+            } else if (response.body.indexOf("Validation required.") > -1) {
                 log.error("Hacker News login failed, too many bad login attempts, Hacker News now requesting Recaptcha validation. Unfortunately, the only way to fix this is time; please ensure your credentials are correct then try again at a later time.");
                 throw "Too many bad login attempts, ReCAPTCHA validation now required";
             }
@@ -177,7 +178,7 @@ class Cleanser {
         let storyLink = "#";
         let source = "self";
 
-        let dom = new Jsdom(homePage);
+        let dom = new JSDOM(homePage);
         let rows = dom.window.document.querySelectorAll("tr");
         for (let row of rows) {
             let className = row.getAttribute("class");
@@ -200,7 +201,7 @@ class Cleanser {
                 if (sourceElement) {
                     source = sourceElement.textContent;
                 } else {
-                    log.debug("d", "Item '" + title + ' is a self post (no site link)');
+                    log.debug("Item '" + title + ' is a self post (no site link)');
                 }
             } else if (nowCheckingStory) {
                 nowCheckingStory = false;
@@ -269,13 +270,13 @@ class Cleanser {
 
         let response = null;
         try {
-            response = await request.post(this.homePageRequest);
+            response = await this.gotClient.post(this.homePageOptions);
             this.lastAuthRefreshTime = new Date();
             log.debug("Hacker News home page obtained");
         } catch (error) {
             log.error("_getHomePage", "Failed to retrieve the Hacker News home page, error=" + error)
         }
-        return response;
+        return response.body;
     }
 
     async _shouldCleanseStory(title, user, source, callback) {
@@ -344,9 +345,17 @@ class Cleanser {
     }
 
     async _hideStory(storyId, auth) {
-        this.hideRequest.form.id = storyId;
-        this.hideRequest.form.auth = auth;
-        await request.post(this.hideRequest);
+        this.hideOptions.form.id = storyId;
+        this.hideOptions.form.auth = auth;
+        /**
+         * Always wait a few seconds before sending the "hide" form to Hacker
+         * News. If you're on a fast system (or hiding a lot of articles in
+         * one go), Hacker News eventually starts stonewalling requests with
+         * 503 and an error that too many requests were made. There's no need
+         * to rush on this, take a break between each hide to avoid the block.
+         */
+        await util.sleepForSeconds(3);
+        await this.gotClient.post("hide", this.hideOptions);
     }
 
     /**
@@ -371,5 +380,3 @@ class Cleanser {
         return decodeURIComponent(results[2].replace(/\+/g, " "))
     }
 }
-
-module.exports = Cleanser;

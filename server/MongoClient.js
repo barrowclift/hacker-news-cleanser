@@ -3,9 +3,9 @@
 // DEPENDENCIES
 // ------------
 // External
-let mongodb = require("mongodb");
+import mongodb from "mongodb";
 // Local
-let Logger = require("./Logger");
+import Logger from "./Logger.js";
 
 
 // CONSTANTS
@@ -18,11 +18,21 @@ const CLASS_NAME = "mongoConnection"
 let log = new Logger(CLASS_NAME);
 
 /**
- * A relatively low-level MongoDB client. Used instead of the generic
- * `mongodb` client to abstract away establishing the inital collection
- * and bake in preferred error handling.
+ * This was originally a "wrapper" to the old v3 `mongodb` client primarily to
+ * sidestep the absolutely nightmare that was callback handling and instead
+ * wrap everything in Promises so callers could simply `await` the necessary
+ * calls.
+ *
+ * However, modern `mongodb` client versions (thankfully!) migrated natively
+ * to Promises, so the vast majority of the value this wrapper class provided
+ * is now moot.
+ *
+ * I'm keeping it around mostly for legacy reasons (it's more work to fully
+ * remove than to remove the now unnecessary Promise wrapping). If this was
+ * being written from scratch today with the modern `mongodb` package, I
+ * wouldn't have made this class at all.
  */
-class MongoClient {
+export default class MongoClient {
 
     /**
      * @param {PropertyManager} propertyManager
@@ -43,31 +53,15 @@ class MongoClient {
     async connect() {
         let mongoServerUrl = "mongodb://" + this.propertyManager.mongoHost + ":" + this.propertyManager.mongoPort + "/" + this.propertyManager.db;
         log.info("Connecting to Mongo at " + mongoServerUrl);
-        return new Promise((resolve, reject) => {
-            mongodb.MongoClient.connect(
-                mongoServerUrl, { useNewUrlParser: true,
-                                  useUnifiedTopology: true }
-            ).then((connection) => {
-                log.info("Connection to Mongo server at " + this.propertyManager.mongoHost + ":" + this.propertyManager.mongoPort + " established");
-                this.connection = connection;
-                this.mongo = connection.db(this.propertyManager.db);
-                resolve();
-            }).catch((error) => {
-                reject(Error(error));
-            });
-        });
+        this.connection = new mongodb.MongoClient(mongoServerUrl);
+        await this.connection.connect();
+        this.mongo = this.connection.db(this.propertyManager.db);
     }
 
     async close() {
         log.debug("Closing Mongo connection...");
-        return new Promise((resolve, reject) => {
-            if (this.connection) {
-                this.connection.close();
-                log.info("Closed Mongo connection");
-            } else {
-                log.warn("Connection already closed");
-            }
-        });
+        await this.connection.close();
+        log.info("Closed Mongo connection");
     }
 
     /**
@@ -82,23 +76,11 @@ class MongoClient {
         }
 
         let collection = this.mongo.collection(collectionName);
-        return new Promise((resolve, reject) => {
-            if (collection && query != null) {
-                collection.find(query).sort(sortQuery).toArray((error, documents) => {
-                    if (error) {
-                        reject(Error(error));
-                    } else if (!documents || documents.length == 0) {
-                        log.debug("Found no results for query='" + JSON.stringify(query) + "', collectionName=" + collectionName);
-                        resolve(null);
-                    } else {
-                        log.debug("Found 1+ documents for query='" + JSON.stringify(query) + "', collectionName=" + collectionName);
-                        resolve(documents);
-                    }
-                });
-            } else {
-                reject(Error("Invalid find arguments, query='" + JSON.stringify(query) + "', collectionName=" + collectionName));
-            }
-        });
+        if (collection == null || query == null) {
+            throw "Invalid find arguments, query='" + JSON.stringify(query) + "', collectionName=" + collectionName;
+        }
+
+        return collection.find(query).sort(sortQuery).toArray();
     }
     findWeeklyReportLogs(query, sortQuery) {
         return this.find(this.propertyManager.collectionWeeklyReportsLog, query, sortQuery);
@@ -132,22 +114,11 @@ class MongoClient {
      */
     insertOne(collectionName, documentToInsert, upsert) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise((resolve, reject) => {
-            if (collection && documentToInsert) {
-                collection.insertOne(documentToInsert,
-                                     { upsert },
-                                     (error) => {
-                    if (error) {
-                        reject(Error(error));
-                    } else {
-                        log.debug("Inserted one document, _id=" + documentToInsert._id + ", collectionName=" + collectionName);
-                        resolve();
-                    }
-                });
-            } else {
-                reject(Error("Invalid insertOne arguments, document='" + documentToInsert + "', collectionName=" + collectionName));
-            }
-        });
+        if (collection == null || documentToInsert == null) {
+            throw "Invalid insertOne arguments, document='" + documentToInsert + "', collectionName=" + collectionName;
+        }
+        collection.insertOne(documentToInsert, { upsert });
+        log.debug("Inserted one document, _id=" + documentToInsert._id + ", collectionName=" + collectionName);
     }
     insertWeeklyReportLog(documentToInsert) {
         return this.insertOne(this.propertyManager.collectionWeeklyReportsLog, documentToInsert);
@@ -163,20 +134,11 @@ class MongoClient {
      */
     deleteById(collectionName, id) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise((resolve, reject) => {
-            if (collection && id) {
-                collection.deleteOne({ _id: id },
-                                     (error) => {
-                    if (error) {
-                        reject(Error(error));
-                    } else {
-                        log.debug("Deleted document, _id=" + id + ", collectionName=" + collectionName);
-                    }
-                })
-            } else {
-                reject(Error("Invalid deleteById arguments, _id=" + id + ", collectionName=" + collectionName));
-            }
-        });
+        if (collection == null || id == null) {
+            "Invalid deleteById arguments, _id=" + id + ", collectionName=" + collectionName;
+        }
+        collection.deleteOne({ _id: id });
+        log.debug("Deleted document, _id=" + id + ", collectionName=" + collectionName);
     }
 
     /**
@@ -187,23 +149,10 @@ class MongoClient {
      */
     dropCollection(collectionName) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise((resolve, reject) => {
-            if (collection) {
-                collection.drop((error) => {
-                    if (error) {
-                        if (error.code == 26) {
-                            resolve("Collection doesn't exist, collectionName=" + collectionName);
-                        } else {
-                            reject(Error(error));
-                        }
-                    } else {
-                        resolve("Dropped collectionName=" + collectionName);
-                    }
-                });
-            } else {
-                reject(Error("Cannot drop collection, collectionName=" + collectionName))
-            }
-        });
+        if (collection == null) {
+            "Cannot drop 'null' collection";
+        }
+        return collection.drop();
     }
     dropCollectionBlacklistedTitles() {
         return this.dropCollection(this.propertyManager.collectionBlacklistedTitles);
@@ -229,20 +178,10 @@ class MongoClient {
      */
     count(collectionName, query) {
         let collection = this.mongo.collection(collectionName);
-        return new Promise((resolve, reject) => {
-            if (collection && query != null) {
-                collection.find(query)
-                          .count((error, count) => {
-                    if (error) {
-                        reject(Error(error));
-                    } else {
-                        resolve(count);
-                    }
-                })
-            } else {
-                reject(Error("Invalid count arguments, query='" + JSON.stringify(query) + "', collectionName=" + collectionName));
-            }
-        });
+        if (collection && query != null) {
+            return collection.countDocuments(query);
+        }
+        throw "Invalid count arguments, query='" + JSON.stringify(query) + "', collectionName=" + collectionName;
     }
 
     /**
@@ -258,5 +197,3 @@ class MongoClient {
     }
 
 }
-
-module.exports = MongoClient;

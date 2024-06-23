@@ -3,10 +3,10 @@
 // DEPENDENCIES
 // ------------
 // External
-let nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 // Local
-let Logger = require("./Logger");
-let util = require("./util");
+import Logger from "./Logger.js";
+import util from "./util.js";
 
 
 // CONSTANTS
@@ -19,7 +19,7 @@ const CLASS_NAME = "ReportMailman";
 let log = new Logger(CLASS_NAME);
 
 
-class ReportMailman {
+export default class ReportMailman {
 
     /**
      * Initializes the report "mailman" that can be used to send out report
@@ -80,9 +80,12 @@ class ReportMailman {
      */
     async shouldSend() {
         if (!this.propertyManager.emailReportEnabled) {
-            throw "Email Reports are disabled";
-        } else if (!this.propertyManager.requiredEmailReportPropertiesWereProvided()) {
-            throw "Email Reports are enabled but required properties are missing";
+            log.info("Email Reports are disabled");
+            return false;
+        }
+        if (!this.propertyManager.requiredEmailReportPropertiesWereProvided()) {
+            log.warning("Email Reports are enabled but required properties are missing");
+            return false;
         }
 
         // Find all documents
@@ -523,5 +526,3 @@ class ReportMailman {
         `;
     }
 }
-
-module.exports = ReportMailman;

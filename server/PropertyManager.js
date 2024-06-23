@@ -3,10 +3,10 @@
 // DEPENDENCIES
 // ------------
 // External
-let nodePropertyLoader = require("properties");
+import nodePropertyLoader from "properties";
 // Local
-let Logger = require("./Logger");
-let util = require("./util");
+import Logger from "./Logger.js";
+import util from "./util.js";
 
 
 // CONSTANTS
@@ -19,7 +19,7 @@ const DEFAULT_HACKER_NEWS_USERNAME = null;
 const DEFAULT_HACKER_NEWS_PASSWORD = null;
 
 const DEFAULT_CLEANSER_FREQUENCY_IN_MINUTES = 1;
-const DEFAULT_USER_AGENT_BASE = "HackerNewsCleanser/2.0 +https://github.com/barrowclift/hacker-news-cleanser"
+const DEFAULT_USER_AGENT_BASE = "HackerNewsCleanser/2.8 +https://github.com/barrowclift/hacker-news-cleanser"
 
 const DEFAULT_MONGO_HOST = "localhost";
 const DEFAULT_MONGO_PORT = 27017;
@@ -53,7 +53,7 @@ let log = new Logger(CLASS_NAME);
  * Thus, letting calling code get back to what's *actually* important to them:
  * their own work.
  */
-class PropertyManager {
+export default class PropertyManager {
 
     /**
      * Does not automatically load any properties file, but simply initializes
@@ -199,5 +199,3 @@ class PropertyManager {
     }
 
 }
-
-module.exports = PropertyManager;

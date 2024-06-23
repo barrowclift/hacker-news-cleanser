@@ -3,14 +3,14 @@
 // DEPENDENCIES
 // ------------
 // External
-let path = require("path");
+import path from "path";
 // Local
-let MongoClient = require("./MongoClient");
-let Logger = require("./Logger");
-let paths = require("./paths");
-let PropertyManager = require("./PropertyManager");
-let ReportMailman = require("./ReportMailman");
-let Cleanser = require("./Cleanser");
+import MongoClient from "./MongoClient.js";
+import Logger from "./Logger.js";
+import paths from "./paths.js";
+import PropertyManager from "./PropertyManager.js";
+import ReportMailman from "./ReportMailman.js";
+import Cleanser from "./Cleanser.js";
 
 
 // CONSTANTS

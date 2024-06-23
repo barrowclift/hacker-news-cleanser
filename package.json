@@ -1,22 +1,21 @@
 {
-	"name": "hackerNewsWasher",
-	"version": "1.0.0",
+	"name": "Hacker News Cleanser",
+	"version": "2.8",
+	"type": "module",
 	"description": "Taking out the trash, one New Yorker post at a time",
-	"main": "hackerNewsWasher.js",
+	"main": "server/main.js",
 	"author": "Marc Barrowclift",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/barrowclift/shelf.git"
+		"url": "https://github.com/barrowclift/hacker-news-cleanser.git"
 	},
 	"dependencies": {
-		"jsdom": "^16.0.1",
-		"mongodb": "^3.5.2",
-		"nodemailer": "^6.4.2",
-		"npm": "^8.19.2",
+		"got": "^14.4.1",
+		"jsdom": "^24.1.0",
+		"mongodb": "^6.7.0",
+		"nodemailer": "^6.9.14",
 		"properties": "^1.2.1",
-		"request": "^2.83.0",
-		"request-promise": "^4.2.5",
-		"url": "^0.11.0"
+		"tough-cookie": "^4.1.4"
 	}
 }

@@ -1,4 +1,4 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 #
 # Adds the specified items to the appropriate blacklist collection
 

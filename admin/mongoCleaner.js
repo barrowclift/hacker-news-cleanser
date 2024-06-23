@@ -3,17 +3,18 @@
 // DEPENDENCIES
 // ------------
 // External
-let path = require("path");
-let Properties = require("properties");
+import path from "path";
+import url from "url";
 // Local
-const CLEANSER_ROOT_DIRECTORY_PATH = path.join(__dirname, "..");
-let PropertyManager = require(path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/PropertyManager"));
-let CachedMongoClient = require(path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/MongoClient"));
+const FILENAME = url.fileURLToPath(import.meta.url);
+const CLEANSER_ROOT_DIRECTORY_PATH = path.join(path.dirname(FILENAME), "../");
+const PropertyManager = await import (path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/PropertyManager.js"));
+const MongoClient = await import (path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/MongoClient.js"));
 
 
 // CONSTANTS
 // ---------
-const PROPERTIES_FILE_NAME = path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/shelf.properties");
+const PROPERTIES_FILE_NAME = path.join(CLEANSER_ROOT_DIRECTORY_PATH, "server/cleanser.properties");
 
 
 // GLOBALS
@@ -22,7 +23,7 @@ var propertyManager = null;
 
 
 async function cleanDbAndClose() {
-    var mongoClient = new CachedMongoClient(propertyManager);
+    var mongoClient = new MongoClient.default(propertyManager);
     await mongoClient.connect();
     await mongoClient.dropCollectionBlacklistedTitles();
     await mongoClient.dropCollectionBlacklistedSites();
@@ -33,7 +34,7 @@ async function cleanDbAndClose() {
 }
 
 async function main() {
-    propertyManager = new PropertyManager();
+    propertyManager = new PropertyManager.default();
     await propertyManager.load(PROPERTIES_FILE_NAME);
 
     await cleanDbAndClose();
