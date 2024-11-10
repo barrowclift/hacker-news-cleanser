@@ -182,7 +182,7 @@ export default class Cleanser {
         let rows = dom.window.document.querySelectorAll("tr");
         for (let row of rows) {
             let className = row.getAttribute("class");
-            if ("athing" == className) {
+            if (className && className.includes("athing")) {
                 nowCheckingStory = true;
 
                 idOfCurrentStory = row.getAttribute("id");
